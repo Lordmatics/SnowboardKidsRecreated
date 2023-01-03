@@ -6,11 +6,23 @@
 #include <Camera/CameraComponent.h>
 #include <Kismet/KismetMathLibrary.h>
 #include <DrawDebugHelpers.h>
+#include "../Animation/SnowboarderAnimInstance.h"
+
+	//auto map = [](float val, float valmin, float valmax, float desiredmin, float desiredmax) -> float
+	//{
+	//	const float denominator = valmax - valmin;
+	//	if (denominator == 0.0f)
+	//	{
+	//		return val;
+	//	}
+	//	float ratio = (desiredmax - desiredmin) / denominator;
+	//	return desiredmin + ratio * (val - valmin);
+	//};
 
 UCustomPawnMovementComponent::UCustomPawnMovementComponent()
 {
 	ForwardSpeed = 5.0f;
-	TurnSpeed = 1.25f;
+	HorizontalSpeed = 1.25f;
 	Acceleration = 1.0f;
 	MaxSpeed = 10.0f;
 	MaxSpeedWhenCharged = 20.0f;
@@ -18,16 +30,28 @@ UCustomPawnMovementComponent::UCustomPawnMovementComponent()
 	bTurning = false;
 	bJumping = false;
 	bFalling = false;
+	bCharged = false;
+	bCharging = false;
+	bSouthInputIgnored = false;
 
 	JumpTimer = 0.0f;
 	JumpApexTime = 2.0f; // Variable depending on skill.
 
+	ChargeTimer = 0.0f;
+	ChargeApexTime = 2.5f;
+
 	GravityScale = 1.0f;
 	JumpScale = 1.0f;
+	JumpForwardScale = 1.0f;
 }
 
 void UCustomPawnMovementComponent::ProcessJump(float DeltaTime)
 {
+	if (GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Jumping: %s"), bJumping ? TEXT("True") : TEXT("False") ));
+	}
+
 	if (!bJumping)
 	{
 		return;
@@ -44,10 +68,25 @@ void UCustomPawnMovementComponent::ProcessJump(float DeltaTime)
 		return;
 	}
 
-	// Add Vertical movement.
-	FVector JumpVector(FVector::UpVector);
-	JumpVector *= JumpScale;
+	// ChargedJumpFactor
+	int ChargedJumpFactor = 1;
+	if (bChargedJumping)
+	{
+		ChargedJumpFactor = 2;
+	}
 
+	// Add Vertical movement - and a bit of forward movement.
+	FVector JumpVector(FVector::UpVector);
+	JumpVector *= JumpScale * ChargedJumpFactor;
+
+	// Only add forward movement, if we're not at max speed.
+	if (ForwardSpeed <= MaxSpeed)
+	{
+		FVector ForwardVector(FVector::ForwardVector);
+		ForwardVector *= JumpForwardScale * ChargedJumpFactor;
+		JumpVector += ForwardVector;
+	}
+	
 	AddInputVector(JumpVector);
 }
 
@@ -59,6 +98,12 @@ void UCustomPawnMovementComponent::ProcessGravity(float DeltaTime)
 	}
 
 	const bool bIsGrounded = RaycastDown();
+	
+	if (GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Falling: %s"), bIsGrounded ? TEXT("False") : TEXT("True")));
+	}
+
 	if (!bIsGrounded)
 	{
 		// Apply downward movement.
@@ -68,92 +113,169 @@ void UCustomPawnMovementComponent::ProcessGravity(float DeltaTime)
 
 		AddInputVector(GravityVec);
 	}
-	else
+	else if(bFalling)
 	{
-		bFalling = false;
+		OnLanded();
 	}
 }
 
-void UCustomPawnMovementComponent::ProcessMovement(float DeltaTime, FQuat Rotation)
+void UCustomPawnMovementComponent::ProcessAcceleration(float DeltaTime)
 {
-	const APawn* Owner = GetPawnOwner();
-	if (!Owner)
+	if (GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Speed: %.1f, Max: %.1f"), ForwardSpeed, MaxSpeed));
+	}
+
+	ForwardSpeed += Acceleration * DeltaTime;
+	ForwardSpeed = FMath::Clamp(ForwardSpeed, 0.0f, MaxSpeed);
+}
+
+void UCustomPawnMovementComponent::ProcessCharging(float DeltaTime)
+{
+	if (GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Charged: %s"), bCharged ? TEXT("True"):TEXT("False")));
+		GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Charging: %s, Timer: %.1f"), bCharging ? TEXT("True") : TEXT("False"), ChargeTimer));
+	}
+
+	if (bCharged)
 	{
 		return;
 	}
 
-	if (!Camera)
+	if (bCharging)
 	{
-		if (const ASnowboardCharacterBase* SnowboardBase = Cast<ASnowboardCharacterBase>(Owner))
+		if (AnimInstance)
+		{			
+			AnimInstance->SetCharging(true);
+		}
+
+		ChargeTimer += DeltaTime;
+		if (ChargeTimer >= ChargeApexTime)
 		{
-			Camera = SnowboardBase->GetCamera();
+			bCharged = true;
 		}
 	}
+}
 
-	if (!Camera)
+void UCustomPawnMovementComponent::ProcessForwardMovement(float DeltaTime, FQuat Rotation)
+{
+	const APawn* Owner = GetPawnOwner();
+	if (!Owner || !Camera)
 	{
 		return;
 	}
 
-	ProcessJump(DeltaTime);
-	ProcessGravity(DeltaTime);
-
-	// Dot with camera ?
-	
 	const FVector& CamFoward = Camera->GetForwardVector();
 	const FVector& OwnerForward = Owner->GetActorForwardVector();
 
 	const FVector& InputVector = ConsumeInputVector();
-	const float YValue = InputVector.Y;
+	float YValue = InputVector.Y;
 
-	if (GEngine)
+	// Continually move forward.
+	// TODO: Handle crashing and reaccelerating etc.
+	FVector DeltaVec = OwnerForward * ForwardSpeed;
+
+	if (!bCharging && !bCharged)
 	{
-		GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Input: X: %.1f, Y: %.1f, Z: %.1f"), InputVector.X, InputVector.Y, InputVector.Z));
-		GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Right: %.1f"), YValue));
+		FVector TurnVec = InputVector * HorizontalSpeed;
+		if (bJumping || bFalling)
+		{
+			TurnVec *= 0.5f;
+		}
+		DeltaVec += TurnVec;
 	}
-	FVector DeltaVec = OwnerForward  * ForwardSpeed;
-	DeltaVec += (InputVector * TurnSpeed);
-	// TODO: When turning - need to rotate slightly in that direction.
+	else
+	{
+		YValue = 0.0f;
+	}
+	
+	if (AnimInstance)
+	{
+		AnimInstance->SetSpeed(ForwardSpeed);				
+		AnimInstance->SetTilt(YValue);	
+		if (GEngine)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("ForwardSpeed: %.1f"), ForwardSpeed));
+			GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("YValue: %.1f"), YValue));
+		}
+	}
+
+	// Handle Rotating slightly based on input.
+	FRotator UpdatedRotation = Rotation.Rotator();
+	if (USceneComponent* RootComp = Owner->GetRootComponent())
+	{
+		if (YValue != 0.0f)
+		{
+			FRotator NewRotation;
+			NewRotation.Add(0.0f, YValue, 0.0f); // Z Will do slashes spin rotation lol.
+			RootComp->AddRelativeRotation(NewRotation);			
+		}
+
+		// Set Rotation of board to match tilt.
+		if (const ASnowboardCharacterBase* SnowboardCharacter = Cast<ASnowboardCharacterBase>(Owner))
+		{
+			if (UStaticMeshComponent* Snowboard = SnowboardCharacter->GetSnowboard())
+			{
+				FRotator BoardRotation;
+				if (YValue < 0.0f)
+				{
+					float ZRot = FMath::Lerp(5.0f, 0.0f, YValue);
+					BoardRotation = FRotator(0.0f, 0.0f, -ZRot);
+				}
+				else if (YValue > 0.0f)
+				{
+					float ZRot = FMath::Lerp(0.0f, 12.5f, YValue);
+					BoardRotation = FRotator(0.0f, 0.0f, ZRot);
+				}
+				else
+				{
+					BoardRotation = FRotator(0.0f, 0.0f, 0.0f);
+				}
+				Snowboard->SetRelativeRotation(BoardRotation);
+			}
+		}
+		UpdatedRotation = RootComp->GetComponentRotation();
+	}
 
 	FHitResult HitResult;
 	ETeleportType TeleportType = ETeleportType::None;
+	SafeMoveUpdatedComponent(DeltaVec, UpdatedRotation, true, HitResult, TeleportType);
+}
 
-	// Rotation
-	if (YValue != 0.0f)
+void UCustomPawnMovementComponent::ProcessMovement(float DeltaTime, FQuat Rotation)
+{
+	if (!ValidateOwnerComponents())
 	{
-		//FVector Axis;
-		//float AngleRadians;
-		//Rotation.ToAxisAndAngle(Axis, AngleRadians);
-		//// TODO: Map 0 - 1 y value, to 0 degrees -> 45 degrees.
-		//// So map 0 - 1, to 1 -> 4 respectively.
-		//float MappedDivisor = 1.0f * FMath::Sign(YValue);
-		//const float AngleRotation = UKismetMathLibrary::SafeDivide(3.14f, MappedDivisor);
-		//AngleRadians += AngleRotation; //add 45 degrees
-		//Rotation = FQuat(Axis, AngleRadians);
-
+		return;
 	}
-
-	//auto map = [](float val, float valmin, float valmax, float desiredmin, float desiredmax) -> float
-	//{
-	//	const float denominator = valmax - valmin;
-	//	if (denominator == 0.0f)
-	//	{
-	//		return val;
-	//	}
-	//	float ratio = (desiredmax - desiredmin) / denominator;
-	//	return desiredmin + ratio * (val - valmin);
-	//};
-
-
-	SafeMoveUpdatedComponent(DeltaVec, Rotation, true, HitResult, TeleportType);	
+	
+	ProcessJump(DeltaTime);
+	ProcessGravity(DeltaTime);
+	ProcessAcceleration(DeltaTime);
+	ProcessCharging(DeltaTime);
+	ProcessForwardMovement(DeltaTime, Rotation);	
 }
 
 void UCustomPawnMovementComponent::TriggerJump()
 {
-	if (bJumping)
+	if (bJumping || bFalling)
 	{
 		return;
 	}
+
+	if (bSouthInputIgnored)
+	{
+		bSouthInputIgnored = false;
+		return;
+	}
+
+	if (bCharged)
+	{
+		bChargedJumping = true;
+	}
+
+	CancelCharge();
 
 	bJumping = true;
 }
@@ -161,7 +283,36 @@ void UCustomPawnMovementComponent::TriggerJump()
 void UCustomPawnMovementComponent::CancelJump()
 {
 	bJumping = false;
+	bChargedJumping = false;
 	JumpTimer = 0.0f;
+}
+
+void UCustomPawnMovementComponent::TriggerCharge()
+{
+	if (bJumping || bCharged || bFalling)
+	{
+		bSouthInputIgnored = true;
+		return;
+	}
+
+	bCharging = true;
+
+	if (AnimInstance)
+	{
+		AnimInstance->SetCharging(true);
+	}
+}
+
+void UCustomPawnMovementComponent::CancelCharge()
+{
+	bCharged = false;
+	bCharging = false;
+	ChargeTimer = 0.0f;
+
+	if (AnimInstance)
+	{
+		AnimInstance->SetCharging(false);
+	}
 }
 
 // False - Falling
@@ -216,4 +367,44 @@ bool UCustomPawnMovementComponent::RaycastDown()
 		//DrawDebugLine(World, Start, End, FLinearColor::Red.ToFColor(true), bPersistent, LifeTime);
 	}
 	return false;
+}
+
+void UCustomPawnMovementComponent::OnLanded()
+{
+	if (bCharged)
+	{
+		CancelCharge();
+	}
+	bFalling = false;
+}
+
+bool UCustomPawnMovementComponent::ValidateOwnerComponents()
+{
+	const APawn* Owner = GetPawnOwner();
+	if (!Owner)
+	{
+		return false;
+	}
+
+	if (!Camera)
+	{
+		if (const ASnowboardCharacterBase* SnowboardBase = Cast<ASnowboardCharacterBase>(Owner))
+		{
+			Camera = SnowboardBase->GetCamera();
+		}
+	}
+
+	if (!AnimInstance)
+	{
+		if (const ASnowboardCharacterBase* SnowboardBase = Cast<ASnowboardCharacterBase>(Owner))
+		{
+			AnimInstance = SnowboardBase->GetAnimInstance();
+		}
+	}
+
+	if (!Camera || !AnimInstance)
+	{
+		return false;
+	}
+	return true;
 }

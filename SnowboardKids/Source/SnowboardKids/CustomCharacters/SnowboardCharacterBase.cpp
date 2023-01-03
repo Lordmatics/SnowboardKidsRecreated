@@ -74,7 +74,7 @@ ASnowboardCharacterBase::ASnowboardCharacterBase() :
 	
 
 	SnowboardMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("SnowboardMesh"));
-	SnowboardMesh->SetupAttachment(SkeletalMesh, SocketNames::SnowboardSocket);
+	SnowboardMesh->SetupAttachment(SkeletalMesh, SocketNames::FootSocket);
 	//SnowboardMesh->SetRelativeScale3D(FVector(0.05f));
 	//SnowboardMesh->SetRelativeLocation(FVector(0.326331f, 0.0f, 0.978994f));
 	SnowboardMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
@@ -110,6 +110,9 @@ void ASnowboardCharacterBase::BeginPlay()
 	{
 		return;
 	}
+
+	if(SnowboardMesh)
+		SnowboardMesh->SetupAttachment(SkeletalMesh, SocketNames::FootSocket);
 
 	const TArray<UMaterialInterface*>& Materials = SkeletalMesh->GetMaterials();
 	int Index = 0;
@@ -260,16 +263,19 @@ void ASnowboardCharacterBase::OnEastReleased()
 
 void ASnowboardCharacterBase::OnSouthPressed()
 {
-	// Jump
 	if (CharacterMovement)
 	{
-		CharacterMovement->TriggerJump();
+		CharacterMovement->TriggerCharge();
 	}
 }
 
 void ASnowboardCharacterBase::OnSouthReleased()
 {
-
+	// Jump
+	if (CharacterMovement)
+	{
+		CharacterMovement->TriggerJump();
+	}
 }
 
 void ASnowboardCharacterBase::OnWestPressed()

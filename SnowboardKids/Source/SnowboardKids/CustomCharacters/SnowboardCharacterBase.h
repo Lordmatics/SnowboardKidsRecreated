@@ -26,6 +26,7 @@ namespace MaterialParameterNames
 namespace SocketNames
 {
 	const FName SnowboardSocket = FName(TEXT("SnowboardSocket"));
+	const FName FootSocket = FName(TEXT("FootSocket"));
 }
 
 UCLASS()
