@@ -8,6 +8,7 @@
 
 class UCameraComponent;
 class USnowboarderAnimInstance;
+class UAnimMontage;
 
 /**
  * 
@@ -54,6 +55,12 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Movement")
 	float ForwardSpeed;
 	
+	/*
+	* How fast should we recoil
+	*/
+	UPROPERTY(EditAnywhere, Category = "Movement")
+	float CrashSpeed;
+
 	/*
 	* Essentially how many units should we move sideways when rotating.
 	*/
@@ -146,6 +153,9 @@ public:
 	float CrashDuration;
 
 	float CrashTimer;
+
+	UPROPERTY(EditAnywhere, Category = "Movement")
+		UAnimMontage* CrashMontage;
 
 
 	UPROPERTY(EditAnywhere, Category = "Movement", meta = (ClampMin = 0.0, ClampMax = 1.0))

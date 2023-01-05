@@ -14,7 +14,6 @@
 #include <Animation/AnimInstance.h>
 #include "SnowboardKids/CustomComponents/CustomPawnMovementComponent.h"
 #include "SnowboardKids/Animation/SnowboarderAnimInstance.h"
-#include <Animation/AnimMontage.h>
 
 // Sets default values
 ASnowboardCharacterBase::ASnowboardCharacterBase() :
@@ -95,27 +94,6 @@ USnowboarderAnimInstance* ASnowboardCharacterBase::GetAnimInstance() const
 void ASnowboardCharacterBase::OnLanded(const FHitResult& Hit)
 {
 	// TODO: Implement.
-}
-
-void ASnowboardCharacterBase::PlayAnimation(UAnimMontage* Montage)
-{	
-	USnowboarderAnimInstance* AnimInstance = GetAnimInstance();
-	if (!AnimInstance)
-	{
-		return;
-	}
-
-	if (!Montage)
-	{
-		return;
-	}
-
-	if (AnimInstance->Montage_IsPlaying(Montage))
-	{
-		return;
-	}
-
-	AnimInstance->Montage_Play(Montage);
 }
 
 // Called when the game starts or when spawned

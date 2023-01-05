@@ -12,7 +12,6 @@ class UStaticMeshComponent;
 class UMaterialInstanceDynamic;
 class UCapsuleComponent;
 class USnowboarderAnimInstance;
-class UAnimMontage;
 //class UCustomCharacterMovementComponent;
 class USkeletalMeshComponent;
 class UPawnMovementComponent;
@@ -51,7 +50,6 @@ public:
 	// Called from Character Movement.
 	virtual void OnLanded(const FHitResult& Hit);
 
-	void PlayAnimation(UAnimMontage* Montage);
 private:
 	virtual void BeginPlay() override;	
 	virtual void Tick(float DeltaTime) override;

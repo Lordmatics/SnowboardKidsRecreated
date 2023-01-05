@@ -8,6 +8,7 @@
 #include <DrawDebugHelpers.h>
 #include "../Animation/SnowboarderAnimInstance.h"
 #include <Kismet/KismetSystemLibrary.h>
+#include <Animation/AnimMontage.h>
 
 	//auto map = [](float val, float valmin, float valmax, float desiredmin, float desiredmax) -> float
 	//{
@@ -21,11 +22,12 @@
 	//};
 
 UCustomPawnMovementComponent::UCustomPawnMovementComponent()
-{
+{	
 	ForwardSpeed = 5.0f;
+	CrashSpeed = 2.0f;
 	HorizontalSpeed = 1.25f;
 	Acceleration = 1.0f;
-	MaxSpeed = 10.0f;
+	MaxSpeed = 8.0f;
 	MaxSpeedWhenCharged = 20.0f;
 	bMovingForward = false;
 	bTurning = false;
@@ -36,30 +38,31 @@ UCustomPawnMovementComponent::UCustomPawnMovementComponent()
 	bSouthInputIgnored = false;
 	bCrashed = false;
 
-	SphereCastRadius = 25.0f;
+	AirTime = 0.25f;
+	SphereCastRadius = 10.0f;
 
 	JumpTimer = 0.0f;
-	JumpApexTime = 2.0f; // Variable depending on skill.
+	JumpApexTime = 0.35f; // Variable depending on skill.
 
 	ChargeTimer = 0.0f;
 	ChargeApexTime = 2.5f;
 
-	GravityScale = 1.0f;
-	JumpScale = 1.0f;
-	JumpForwardScale = 1.0f;
+	GravityScale = 2.75f;
+	JumpScale = 3.0f;
+	JumpForwardScale = 2.0f;
 
 	LeftBoardRot = 5.0f;
 	RightBoardRot = 12.5f;
 
 	InterpSpeedOrientToFloor = 2.0f;
-	BankXRotLimit = 10.0f;
-	BankZRotLimit = 20.0f;
+	BankXRotLimit = 5.0f;
+	BankZRotLimit = 15.0f;
 	TooSteep = 80.0f;
 	GroundedDirScale = 1.0f;
 	RollFactor = 1.2f;
 
 	CrashTimer = 0.0f;
-	CrashDuration = 2.5f;
+	CrashDuration = 1.2f;
 
 	CheckGroundRayLength = 5.0f;
 	SurfaceNormalRayLength = 5.0f;
@@ -83,6 +86,8 @@ bool UCustomPawnMovementComponent::ProcessCrashed(float DeltaTime, FQuat Incomin
 	{
 		CrashTimer = 0.0f;
 		bCrashed = false;
+		// Nuke speed - ready to start reaccelerating
+		ForwardSpeed = 0.0f;
 		return false;
 	}
 
@@ -98,7 +103,7 @@ bool UCustomPawnMovementComponent::ProcessCrashed(float DeltaTime, FQuat Incomin
 	const FVector& CamFoward = Camera->GetForwardVector();
 	const FVector& OwnerForward = Owner->GetActorForwardVector();
 
-	FVector DeltaVec = OwnerForward * ForwardSpeed;
+	FVector DeltaVec = OwnerForward * CrashSpeed;
 
 	// Reverse For Abit.
 	DeltaVec *= -1.0f;
@@ -107,12 +112,6 @@ bool UCustomPawnMovementComponent::ProcessCrashed(float DeltaTime, FQuat Incomin
 	if (USceneComponent* RootComp = Owner->GetRootComponent())
 	{
 		RootComp->SetRelativeRotation(FRotator::ZeroRotator);
-		//if (YValue != 0.0f)
-		//{
-		//	FRotator NewRotation;
-		//	NewRotation.Add(0.0f, YValue, 0.0f); // Z Will do slashes spin rotation lol.
-		//	RootComp->AddRelativeRotation(NewRotation);
-		//}
 
 		// Set Rotation of board to match tilt.
 		RotateBoard(*Owner, 0.0f);
@@ -162,7 +161,7 @@ bool UCustomPawnMovementComponent::ProcessCrashed(float DeltaTime, FQuat Incomin
 	}
 
 	FHitResult OutHit;
-	DeltaVec.Normalize();
+	//DeltaVec.Normalize();
 	SafeMoveUpdatedComponent(DeltaVec, RotationLastFrame, false, OutHit, ETeleportType::None);
 
 	//FVector DirToImpact = (ImpactPoint - OwnerLocation);
@@ -769,6 +768,24 @@ void UCustomPawnMovementComponent::TriggerCrash(const FRotator& UpdatedRotation)
 {
 	bCrashed = true;
 	CrashRot = UpdatedRotation;
+
+	APawn* Owner = GetPawnOwner();
+	if (!Owner)
+	{
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	// Play Animation	
+	if (ASnowboardCharacterBase* SnowboardCharacter = Cast<ASnowboardCharacterBase>(Owner))
+	{
+		SnowboardCharacter->PlayAnimation(CrashMontage);
+	}
 }
 
 FRotator UCustomPawnMovementComponent::OrientRotationToFloor(FQuat IncomingQuat, APawn& Owner, const FVector& DeltaVec, const float YValue, float& PitchResult)
