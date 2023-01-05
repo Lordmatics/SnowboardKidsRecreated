@@ -157,6 +157,7 @@ bool UCustomPawnMovementComponent::ProcessCrashed(float DeltaTime, FQuat Incomin
 
 		// We need to isolate the Z Rotation
 		UpdatedRotation = InterpedRot;
+		//float YawAtThisFrame = RootComp->GetComponentRotation().Yaw;
 		UpdatedRotation.Yaw = RootRotation.Yaw; // Need to enforce this so we can freely turn.
 	}
 
@@ -240,10 +241,15 @@ void UCustomPawnMovementComponent::ProcessGravity(float DeltaTime)
 		bMatchRotToImpactNormal = false;
 		//SetPlaneConstraintEnabled(false);
 		//ImpactNormal = FVector::UpVector;
-		SetGravityVector(GravityVec);
+		SetGravityVector(GravityVec);	
+
+		// NOTE: Be much better to recalibrate our characters Roll (forward/backward tilt) mid air, so we land with the board flat
+
 	}
 	else if(bFalling)
 	{
+		// If we were falling, but now we're grounded.
+		// we effectively are 'landing' on this frame.
 		ConstrainToPlaneNormal(true);
 		ImpactNormal = Hitresult.ImpactNormal;
 		OnLanded();
@@ -341,6 +347,8 @@ void UCustomPawnMovementComponent::ProcessForwardMovement(float DeltaTime, FQuat
 	{
 		// Apply Gravity
 		const FVector& Gravity = ConsumeGravityVector();
+		DeltaVec.Z = 0.0f; // Need to make sure our velocity isn't larger than the gravity in the Z Direction
+		// Else we will fly.
 		DeltaVec += Gravity;
 		DeltaCopy += Gravity;
 	}
@@ -365,14 +373,25 @@ void UCustomPawnMovementComponent::ProcessForwardMovement(float DeltaTime, FQuat
 	RotationLastFrame = UpdatedRotation;
 
 	// Recalculate forward movement, based on new rotation.
-	FVector RotatedForward = OwnerForward;
-	if (NewPitch != 0.0f)
-	{
-		RotatedForward = RotatedForward.RotateAngleAxis(NewPitch, RightVec);
-		RotatedForward.Normalize();
-	}
-	DeltaCopy += RotatedForward *ForwardSpeed;	
+	//FVector RotatedForward = OwnerForward;
+	//if (NewPitch != 0.0f)
+	//{
+	//	RotatedForward = RotatedForward.RotateAngleAxis(NewPitch, RightVec);
+	//	RotatedForward.Normalize();
+	//}
+	//DeltaCopy += RotatedForward *ForwardSpeed;	
 	SafeMoveUpdatedComponent(DeltaVec, UpdatedRotation, bSweep, HitResult, TeleportType);
+
+	// NOTE: We need to recalibrate our height, after each rotation
+	// In case we go down a slope, then go back to flat surface
+	// The sharp rotation will clip us under the floor.
+
+	float OwnerHeight = Owner->GetActorLocation().Z;
+	float ImpactHeight = ImpactPoint.Z;
+	if (ImpactHeight >= OwnerHeight)
+	{
+		volatile int i = 5;
+	}
 
 	if(GetWorld())
 		DrawDebugLine(GetWorld(), OwnerLocation, OwnerLocation + DeltaCopy, FLinearColor::Red.ToFColor(true), false, 2.0f);
@@ -446,9 +465,29 @@ void UCustomPawnMovementComponent::ProcessDetectCollisions(float DeltaTime)
 		DrawDebugLine(World, Start, End, FLinearColor::Red.ToFColor(true), bPersistent, LifeTime);
 	}
 
+	// NOTE: Either use local forward via cross product. // Thinking this might be necessary
+	// OR
+	// Maybe somehow we can limit the steepness at which we stop adhering to the floors normal.
+	// Or
+	// Dot Product the impact normal from the ray and check steepness that way?
+	// We will want to be able to drive up slopes, but at what point should we crash into a slope ?
 	if (bCollisionAhead)
 	{
-		TriggerCrash(RotationLastFrame);
+		FVector CollisionImpactNormal = HitResult.ImpactNormal;
+		float Dot = FVector::DotProduct(ForwardVector, CollisionImpactNormal);
+		// -0.99 is a 90 degree wall
+		// -0.92 for 100 degree wall / 10 degree slope
+		// -0.98 for 80 degree wall
+		// -0.93 for 70 degree wall
+		if (Dot <= -0.9f)
+		{
+			TriggerCrash(RotationLastFrame);
+		}
+		else
+		{
+			// Drivable ?
+		}
+		
 	}
 }
 
@@ -803,7 +842,6 @@ FRotator UCustomPawnMovementComponent::OrientRotationToFloor(FQuat IncomingQuat,
 		return UpdatedRotation;
 	}
 	
-	
 	//ConstrainToPlaneNormal(!bFalling);	
 
 	const float DeltaTime = World->GetDeltaSeconds();
@@ -885,6 +923,11 @@ FRotator UCustomPawnMovementComponent::OrientRotationToFloor(FQuat IncomingQuat,
 
 	// We need to isolate the Z Rotation
 	UpdatedRotation = InterpedRot;
-	UpdatedRotation.Yaw = RootRotation.Yaw; // Need to enforce this so we can freely turn.
+	if (YValue != 0.0f)
+	{
+		int i = 5;
+	}
+	UpdatedRotation.Yaw = RootComp->GetComponentRotation().Yaw;
+	//UpdatedRotation.Yaw = RootRotation.Yaw; // Need to enforce this so we can freely turn.
 	return UpdatedRotation;
 }
