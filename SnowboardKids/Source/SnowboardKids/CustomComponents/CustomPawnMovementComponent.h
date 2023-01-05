@@ -158,6 +158,8 @@ public:
 		UAnimMontage* CrashMontage;
 
 
+	bool bAdjustedHack = false;
+
 	UPROPERTY(EditAnywhere, Category = "Movement", meta = (ClampMin = 0.0, ClampMax = 1.0))
 	float TurnLimit;
 

@@ -103,67 +103,88 @@ bool UCustomPawnMovementComponent::ProcessCrashed(float DeltaTime, FQuat Incomin
 	const FVector& CamFoward = Camera->GetForwardVector();
 	const FVector& OwnerForward = Owner->GetActorForwardVector();
 
-	FVector DeltaVec = OwnerForward * CrashSpeed;
+	// Create matrix relative to current state
+	FVector RightVector = FVector::CrossProduct(OwnerForward, FVector::UpVector);
+	FVector UpVector = FVector::CrossProduct(OwnerForward, RightVector);
+
+	// Determine objective forward vector
+	FVector LocalRightVector = FVector::CrossProduct(UpVector, FVector::ForwardVector);
+	FVector LocalForwardVector = FVector::CrossProduct(UpVector, LocalRightVector);
+
+	// Get Angle between our forward and the worlds forward.
+	// Then rotate worlds forward so it points in the direction of our forward
+	float DotAngle = FVector::DotProduct(OwnerForward, FVector::ForwardVector);
+	float AngleInRads = FMath::Acos(DotAngle);
+	float AngleInDegs = FMath::RadiansToDegrees(AngleInRads);
+	FVector RotatedForward = FVector::ForwardVector.RotateAngleAxis(AngleInDegs, FVector::UpVector);
+	// Might be better to construct a more horizontal forward vec
+	// If we crash into something at an angle, we are going to bounce
+	// Which is not right.
+	FVector DeltaVec = RotatedForward * CrashSpeed;
 
 	// Reverse For Abit.
 	DeltaVec *= -1.0f;
 
-	FRotator UpdatedRotation = IncomingQuat.Rotator();
-	if (USceneComponent* RootComp = Owner->GetRootComponent())
-	{
-		RootComp->SetRelativeRotation(FRotator::ZeroRotator);
+	// Need to reset our rotation
+	FRotator RecoilRotation = RotationLastFrame;
+	RecoilRotation.Pitch = 0.0f;
 
-		// Set Rotation of board to match tilt.
-		RotateBoard(*Owner, 0.0f);
+	//FRotator UpdatedRotation = IncomingQuat.Rotator();
+	//if (USceneComponent* RootComp = Owner->GetRootComponent())
+	//{
+	//	RootComp->SetRelativeRotation(FRotator::ZeroRotator);
 
-		FRotator RootRotation = RootComp->GetComponentRotation();
+	//	// Set Rotation of board to match tilt.
+	//	RotateBoard(*Owner, 0.0f);
 
-		// Fullpower at && YValue == 0.0f
-		// Much less when it's a value.
-		FVector RightVec = RootComp->GetRightVector();
-		FVector ForwardVec = RootComp->GetForwardVector();
+	//	FRotator RootRotation = RootComp->GetComponentRotation();
 
-		// X
-		float NewPitch = UKismetMathLibrary::MakeRotFromXZ(ForwardVec, ImpactNormal).Roll;
-		// Y
-		float NewRoll = UKismetMathLibrary::MakeRotFromYZ(RightVec, ImpactNormal).Pitch;
-		// Z
-		float NewYaw = RootRotation.Yaw;
+	//	// Fullpower at && YValue == 0.0f
+	//	// Much less when it's a value.
+	//	FVector RightVec = RootComp->GetRightVector();
+	//	FVector ForwardVec = RootComp->GetForwardVector();
 
-		if (GEngine)
-		{
-			GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Pitch (X): %.1f"), NewPitch));
-			GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Roll (Y): %.1f"), NewRoll));
-			GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Yaw (Z): %.1f"), NewYaw));
-		}
+	//	// X
+	//	float NewPitch = UKismetMathLibrary::MakeRotFromXZ(ForwardVec, ImpactNormal).Roll;
+	//	// Y
+	//	float NewRoll = UKismetMathLibrary::MakeRotFromYZ(RightVec, ImpactNormal).Pitch;
+	//	// Z
+	//	float NewYaw = RootRotation.Yaw;
 
-		// If we're going downhill, subtract a number
-		// If we're going uphill, add a number
-		FRotator FinalRot(NewRoll, NewPitch, NewYaw);
-		float InterpSpeed = InterpSpeedOrientToFloor;
-		FRotator InterpedRot = UKismetMathLibrary::RInterpTo(RootRotation, FinalRot, DeltaTime, InterpSpeedOrientToFloor);
-		InterpedRot.Roll = FMath::Clamp(InterpedRot.Roll, -BankXRotLimit, BankXRotLimit);
-		InterpedRot.Yaw = FMath::Clamp(InterpedRot.Yaw, -BankZRotLimit, BankZRotLimit);
-		float ExactPitch = NewRoll;
-		InterpedRot.Pitch = ExactPitch;
+	//	if (GEngine)
+	//	{
+	//		GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Pitch (X): %.1f"), NewPitch));
+	//		GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Roll (Y): %.1f"), NewRoll));
+	//		GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Yaw (Z): %.1f"), NewYaw));
+	//	}
 
-		if (GEngine)
-		{
-			GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Crashed: %s"), bCrashed ? TEXT("True") : TEXT("False")));
-			GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("InterpedRotPitch (X): %.1f"), InterpedRot.Pitch));
-			GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("InterpedRotRoll (Y): %.1f"), InterpedRot.Roll));
-			GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("InterpedRotYaw (Z): %.1f"), InterpedRot.Yaw));
-		}
+	//	// If we're going downhill, subtract a number
+	//	// If we're going uphill, add a number
+	//	FRotator FinalRot(NewRoll, NewPitch, NewYaw);
+	//	float InterpSpeed = InterpSpeedOrientToFloor;
+	//	FRotator InterpedRot = UKismetMathLibrary::RInterpTo(RootRotation, FinalRot, DeltaTime, InterpSpeedOrientToFloor);
+	//	InterpedRot.Roll = FMath::Clamp(InterpedRot.Roll, -BankXRotLimit, BankXRotLimit);
+	//	InterpedRot.Yaw = FMath::Clamp(InterpedRot.Yaw, -BankZRotLimit, BankZRotLimit);
+	//	float ExactPitch = NewRoll;
+	//	InterpedRot.Pitch = ExactPitch;
 
-		// We need to isolate the Z Rotation
-		UpdatedRotation = InterpedRot;
-		//float YawAtThisFrame = RootComp->GetComponentRotation().Yaw;
-		UpdatedRotation.Yaw = RootRotation.Yaw; // Need to enforce this so we can freely turn.
-	}
+	//	if (GEngine)
+	//	{
+	//		GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Crashed: %s"), bCrashed ? TEXT("True") : TEXT("False")));
+	//		GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("InterpedRotPitch (X): %.1f"), InterpedRot.Pitch));
+	//		GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("InterpedRotRoll (Y): %.1f"), InterpedRot.Roll));
+	//		GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("InterpedRotYaw (Z): %.1f"), InterpedRot.Yaw));
+	//	}
+
+	//	// We need to isolate the Z Rotation
+	//	UpdatedRotation = InterpedRot;
+	//	//float YawAtThisFrame = RootComp->GetComponentRotation().Yaw;
+	//	UpdatedRotation.Yaw = RootRotation.Yaw; // Need to enforce this so we can freely turn.
+	//}
 
 	FHitResult OutHit;
 	//DeltaVec.Normalize();
-	SafeMoveUpdatedComponent(DeltaVec, RotationLastFrame, false, OutHit, ETeleportType::None);
+	SafeMoveUpdatedComponent(DeltaVec, RecoilRotation, true, OutHit, ETeleportType::None);
 
 	//FVector DirToImpact = (ImpactPoint - OwnerLocation);
 	//DirToImpact.Normalize();
@@ -369,7 +390,7 @@ void UCustomPawnMovementComponent::ProcessForwardMovement(float DeltaTime, FQuat
 	FRotator UpdatedRotation = OrientRotationToFloor(IncomingQuat, *Owner, DeltaVec, YValue, NewPitch);
 	FHitResult HitResult;
 	ETeleportType TeleportType = ETeleportType::None;// : ETeleportType::ResetPhysics;
-	bool bSweep = false;
+	bool bSweep = true;
 	RotationLastFrame = UpdatedRotation;
 
 	// Recalculate forward movement, based on new rotation.
@@ -393,6 +414,29 @@ void UCustomPawnMovementComponent::ProcessForwardMovement(float DeltaTime, FQuat
 		volatile int i = 5;
 	}
 
+	if (HitResult.bBlockingHit)
+	{
+		FVector HitNormal = HitResult.ImpactNormal;
+		const FVector& Start = Owner->GetActorLocation();
+		const FVector& ForwardVector = Owner->GetActorForwardVector();
+		const FVector& RightVector = Owner->GetActorRightVector();
+		float AdjustedRoll = UKismetMathLibrary::MakeRotFromXZ(ForwardVector, HitNormal).Roll;
+		float AdjustedPitch = UKismetMathLibrary::MakeRotFromYZ(RightVector, HitNormal).Pitch;
+		float CurrentYaw = UpdatedRotation.Yaw;
+		FRotator AdjustedRot = FRotator(AdjustedPitch, CurrentYaw, AdjustedRoll);
+		
+		FHitResult OutHit;
+		float TranslationX = (ForwardVector.X * 50.0f);
+		float TranslationZ = UKismetMathLibrary::SafeDivide(FMath::Abs((Start - HitResult.ImpactPoint).Z), 2.5f);
+		FVector TranslationZDelta = FVector(TranslationX, 0.0f, TranslationZ);
+		SafeMoveUpdatedComponent(TranslationZDelta, AdjustedRot, true, OutHit, TeleportType);
+
+		if (OutHit.bBlockingHit)
+		{
+			TriggerCrash(AdjustedRot);
+		}
+
+	}
 	if(GetWorld())
 		DrawDebugLine(GetWorld(), OwnerLocation, OwnerLocation + DeltaCopy, FLinearColor::Red.ToFColor(true), false, 2.0f);
 
@@ -400,14 +444,6 @@ void UCustomPawnMovementComponent::ProcessForwardMovement(float DeltaTime, FQuat
 
 void UCustomPawnMovementComponent::ProcessDetectCollisions(float DeltaTime)
 {
-	//if (NewRoll > TooSteep)
-	//{
-	//	if (Dot >= 0.0f)
-	//	{
-	//		// Trigger Collision / knock down
-	//		TriggerCrash(UpdatedRotation);
-	//	}
-	//}
 	bool bCollisionAhead = false;
 
 	APawn* Owner = GetPawnOwner();
@@ -426,6 +462,7 @@ void UCustomPawnMovementComponent::ProcessDetectCollisions(float DeltaTime)
 	TArray<AActor*> ActorsToIgnore;
 	FVector Start = Owner->GetActorLocation();
 	FVector ForwardVector = Owner->GetActorForwardVector();
+	FVector RightVector = Owner->GetActorRightVector();
 	//Start += FVector(0.0f, 0.0f, 5.0f);	
 	const FVector End = Start + (ForwardVector * CheckCollisionRayLength);
 	FCollisionQueryParams QueryParams;
@@ -471,21 +508,72 @@ void UCustomPawnMovementComponent::ProcessDetectCollisions(float DeltaTime)
 	// Or
 	// Dot Product the impact normal from the ray and check steepness that way?
 	// We will want to be able to drive up slopes, but at what point should we crash into a slope ?
+	FVector CollisionImpactNormal = HitResult.ImpactNormal;
+
 	if (bCollisionAhead)
 	{
-		FVector CollisionImpactNormal = HitResult.ImpactNormal;
+
+		// Okay okay okay
+		// So...
+		// Driving into a wall == bad = force collision
+		// This will be very close to the normal being horizontal, so 1 in the x or y
+
+		// Driving into the floor, should just have the character recalibrate to the new surface
+		// This normal will be much more like 0 0 1
+
+		// Need to distinguish between these 2 cases, to do the approrpriate handling.
+
+		FVector WorldRight = FVector::RightVector;
+		FVector WorldForward = FVector::ForwardVector;
+
+		// If the angle between the normal and the world up vector is idk, < 90, so 3.14 / 4 radians
+		// WE can assume change of surface, else trigger crash.
+
+		// Projection = V1Dot UnitV2 * UnitV2, how much of V1 is on V2
+		const float AngleBetweenNormalAndUpRads = FVector::DotProduct(CollisionImpactNormal, FVector::UpVector);
+		const float AngleInDegrees = FMath::RadiansToDegrees(AngleBetweenNormalAndUpRads);
+		//const float Threshold = 3.14f * 0.25f;
+		const float AbsAngle = FMath::Abs(AngleInDegrees);
+		if (AngleInDegrees < 90.0f && AngleInDegrees > 0.0f)
+		{
+			// Safe
+		}
+		else
+		{
+			TriggerCrash(RotationLastFrame);
+			return;
+		}
+		
+
+
 		float Dot = FVector::DotProduct(ForwardVector, CollisionImpactNormal);
 		// -0.99 is a 90 degree wall
 		// -0.92 for 100 degree wall / 10 degree slope
 		// -0.98 for 80 degree wall
 		// -0.93 for 70 degree wall
-		if (Dot <= -0.9f)
+		//if (Dot <= -0.55f)
+
+		// -0.9f crash
+		// -0.85f driving into the floor - maybe we should just update the rotation in this scenario?
+		//if (Dot <= -0.93f)
 		{
-			TriggerCrash(RotationLastFrame);
-		}
-		else
-		{
-			// Drivable ?
+			//TriggerCrash(RotationLastFrame);
+		//}
+		//else
+		//{
+			// Recalibrate rotation Based on inpact
+			// Create matrix relative to current state
+			float NewRoll = UKismetMathLibrary::MakeRotFromXZ(ForwardVector, CollisionImpactNormal).Roll;
+			float NewPitch = UKismetMathLibrary::MakeRotFromYZ(RightVector, CollisionImpactNormal).Pitch;
+			float CurrentYaw = RotationLastFrame.Yaw;			
+			FRotator AdjustedRot = FRotator(NewPitch, CurrentYaw, NewRoll);
+
+			FHitResult OutHit;
+			float TranslationX = (ForwardVector.X * 50.0f);
+			float TranslationZ = UKismetMathLibrary::SafeDivide(FMath::Abs((Start - HitResult.ImpactPoint).Z), 2.5f);
+			FVector TranslationZDelta = FVector(TranslationX, 0.0f, TranslationZ);
+			SafeMoveUpdatedComponent(TranslationZDelta, AdjustedRot, false, OutHit, ETeleportType::None);
+			//bAdjustedHack = true;
 		}
 		
 	}
@@ -498,6 +586,11 @@ void UCustomPawnMovementComponent::ProcessMovement(float DeltaTime, FQuat Incomi
 		return;
 	}
 	
+	if (bAdjustedHack)
+	{
+		return;
+	}
+
 	if (ProcessCrashed(DeltaTime, IncomingQuat))
 	{
 		return;
@@ -901,17 +994,6 @@ FRotator UCustomPawnMovementComponent::OrientRotationToFloor(FQuat IncomingQuat,
 	{
 		GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Red, FString::Printf(TEXT("DotToImpact: %.1f"), Dot));
 	}
-
-	// This check is not robust enough.
-	// We'll have to sphere cast in front of us.
-	//if (NewRoll > TooSteep)
-	//{
-	//	if (Dot >= 0.0f)
-	//	{
-	//		// Trigger Collision / knock down
-	//		TriggerCrash(UpdatedRotation);
-	//	}
-	//}
 
 	if (GEngine)
 	{
