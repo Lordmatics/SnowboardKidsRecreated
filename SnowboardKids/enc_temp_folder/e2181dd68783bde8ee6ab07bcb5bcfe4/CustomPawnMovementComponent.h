@@ -26,7 +26,6 @@ private:
 	void ProcessAcceleration(float DeltaTime);
 	void ProcessCharging(float DeltaTime);
 	void ProcessForwardMovement(float DeltaTime, FQuat IncomingQuat);
-	void ProcessDetectCollisions(float DeltaTime);
 	bool IsGrounded(FHitResult& Result);
 	bool GetSurfaceNormal(FHitResult& Result);
 	void OnLanded();
@@ -89,15 +88,6 @@ public:
 
 	float JumpTimer;
 	float ChargeTimer;
-
-	UPROPERTY(EditAnywhere, Category = "Movement")
-	float CheckGroundRayLength;
-
-	UPROPERTY(EditAnywhere, Category = "Movement")
-	float SurfaceNormalRayLength;
-
-	UPROPERTY(EditAnywhere, Category = "Movement")
-	float CheckCollisionRayLength;
 
 	UPROPERTY(EditAnywhere, Category = "Movement")
 	float JumpApexTime;

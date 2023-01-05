@@ -61,10 +61,6 @@ UCustomPawnMovementComponent::UCustomPawnMovementComponent()
 	CrashTimer = 0.0f;
 	CrashDuration = 2.5f;
 
-	CheckGroundRayLength = 5.0f;
-	SurfaceNormalRayLength = 5.0f;
-	CheckCollisionRayLength = 62.5f;
-
 	CrashRot = FRotator::ZeroRotator;
 	RotationLastFrame = FRotator::ZeroRotator;
 	TurnLimit = 0.5f; // This is literally the Turning Star on the original game, higher = more control.
@@ -245,24 +241,22 @@ void UCustomPawnMovementComponent::ProcessGravity(float DeltaTime)
 	}
 	else if(bFalling)
 	{
-		ConstrainToPlaneNormal(true);
-		ImpactNormal = Hitresult.ImpactNormal;
+		ConstrainToPlaneNormal(false);
 		OnLanded();
 	}
 	else
 	{
 		// Grounded - make sure our upvector matches the impact normal of the floor.
-		const bool SurfaceNormalFound = GetSurfaceNormal(Hitresult);
-		if(SurfaceNormalFound)
+		if (GetSurfaceNormal(Hitresult))
 		{			
 			ConstrainToPlaneNormal(true);
 			ImpactNormal = Hitresult.ImpactNormal;
 			//SetPlaneConstraintNormal(ImpactNormal);
 		}	
-		//else
-		//{
-		//	ConstrainToPlaneNormal(false);
-		//}
+		else
+		{
+			ConstrainToPlaneNormal(false);
+		}
 	}
 
 	if (GEngine)
@@ -331,7 +325,7 @@ void UCustomPawnMovementComponent::ProcessForwardMovement(float DeltaTime, FQuat
 	// Continually move forward.
 	// TODO: Handle crashing and reaccelerating etc.
 	FVector DeltaVec = OwnerForward * ForwardSpeed;
-	FVector DeltaCopy = FVector::ZeroVector;
+	FVector DeltaCopy;
 	if (!bCharging && !bCharged)
 	{
 		FVector TurnVec = InputVector * HorizontalSpeed;
@@ -370,87 +364,13 @@ void UCustomPawnMovementComponent::ProcessForwardMovement(float DeltaTime, FQuat
 	if (NewPitch != 0.0f)
 	{
 		RotatedForward = RotatedForward.RotateAngleAxis(NewPitch, RightVec);
-		RotatedForward.Normalize();
 	}
-	DeltaCopy += RotatedForward *ForwardSpeed;	
-	SafeMoveUpdatedComponent(DeltaVec, UpdatedRotation, bSweep, HitResult, TeleportType);
+	DeltaCopy += RotatedForward * ForwardSpeed;
+	SafeMoveUpdatedComponent(DeltaCopy, UpdatedRotation, bSweep, HitResult, TeleportType);
 
 	if(GetWorld())
 		DrawDebugLine(GetWorld(), OwnerLocation, OwnerLocation + DeltaCopy, FLinearColor::Red.ToFColor(true), false, 2.0f);
 
-}
-
-void UCustomPawnMovementComponent::ProcessDetectCollisions(float DeltaTime)
-{
-	//if (NewRoll > TooSteep)
-	//{
-	//	if (Dot >= 0.0f)
-	//	{
-	//		// Trigger Collision / knock down
-	//		TriggerCrash(UpdatedRotation);
-	//	}
-	//}
-	bool bCollisionAhead = false;
-
-	APawn* Owner = GetPawnOwner();
-	if (!Owner)
-	{
-		return;
-	}
-
-	UWorld* World = GetWorld();
-	if (!World)
-	{
-		return;
-	}
-
-	FHitResult HitResult;
-	TArray<AActor*> ActorsToIgnore;
-	FVector Start = Owner->GetActorLocation();
-	FVector ForwardVector = Owner->GetActorForwardVector();
-	//Start += FVector(0.0f, 0.0f, 5.0f);	
-	const FVector End = Start + (ForwardVector * CheckCollisionRayLength);
-	FCollisionQueryParams QueryParams;
-	QueryParams.AddIgnoredActor(Owner);
-
-	AActor* OwnerChar = Cast<AActor>(Owner);
-	ActorsToIgnore.Add(OwnerChar);
-
-	const bool bHit = UKismetSystemLibrary::SphereTraceSingle(GetOuter(), Start, End, SphereCastRadius, ETraceTypeQuery::TraceTypeQuery2, true,
-		ActorsToIgnore, EDrawDebugTrace::ForOneFrame, HitResult, true);
-
-	//const bool bHit = World->LineTraceSingleByChannel(Result, Start, End, ECollisionChannel::ECC_WorldStatic, QueryParams);
-	bool bPersistent = false;
-	float LifeTime = 1.0f;
-
-	if (bHit && HitResult.bBlockingHit)
-	{
-		if (GEngine && HitResult.GetActor())
-		{
-			GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Hit: %s"), *HitResult.GetActor()->GetName()));
-		}
-
-		// Red up to the blocking hit, green thereafter
-		DrawDebugLine(World, Start, HitResult.ImpactPoint, FLinearColor::Red.ToFColor(true), bPersistent, LifeTime);
-		DrawDebugLine(World, HitResult.ImpactPoint, End, FLinearColor::Green.ToFColor(true), bPersistent, LifeTime);
-		DrawDebugPoint(World, HitResult.ImpactPoint, 16.0f, FLinearColor::Red.ToFColor(true), bPersistent, LifeTime);
-
-		bCollisionAhead = true;
-	}
-	else
-	{
-		if (GEngine)
-		{
-			GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("NoHit")));
-		}
-
-		DrawDebugLine(World, Start, End, FLinearColor::Red.ToFColor(true), bPersistent, LifeTime);
-	}
-
-	if (bCollisionAhead)
-	{
-		TriggerCrash(RotationLastFrame);
-	}
 }
 
 void UCustomPawnMovementComponent::ProcessMovement(float DeltaTime, FQuat IncomingQuat)
@@ -471,8 +391,6 @@ void UCustomPawnMovementComponent::ProcessMovement(float DeltaTime, FQuat Incomi
 	ProcessAcceleration(DeltaTime);
 	ProcessCharging(DeltaTime);
 	ProcessForwardMovement(DeltaTime, IncomingQuat);
-
-	ProcessDetectCollisions(DeltaTime);
 }
 
 void UCustomPawnMovementComponent::TriggerJump()
@@ -560,8 +478,9 @@ bool UCustomPawnMovementComponent::IsGrounded(FHitResult& Result)
 	}
 
 	const float DeltaTime = World->GetDeltaSeconds();
-	//Start += FVector(0.0f, 0.0f, 5.0f);	
-	const FVector End = Start + (FVector::DownVector * CheckGroundRayLength);
+	//Start += FVector(0.0f, 0.0f, 5.0f);
+	const float RayLength = 10.0f;
+	const FVector End = Start + (FVector::DownVector * RayLength);
 	FCollisionQueryParams QueryParams;
 	QueryParams.AddIgnoredActor(Owner);
 
@@ -631,8 +550,9 @@ bool UCustomPawnMovementComponent::GetSurfaceNormal(FHitResult& Result)
 	const float DeltaTime = World->GetDeltaSeconds();
 	//const FVector& Start = Owner->GetActorLocation() + FVector(0.0f, 0.0f, 0.0f);
 	//const FVector& Start = Snowboard->GetActorLocation() + FVector(0.0f, 0.0f, 0.0f);
-	
-	const FVector End = Start + (FVector::DownVector * SurfaceNormalRayLength);
+
+	const float RayLength = 5.0f;
+	const FVector End = Start + (FVector::DownVector * RayLength);
 	FCollisionQueryParams QueryParams;
 	QueryParams.AddIgnoredActor(Owner);
 
@@ -847,16 +767,14 @@ FRotator UCustomPawnMovementComponent::OrientRotationToFloor(FQuat IncomingQuat,
 		GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Red, FString::Printf(TEXT("DotToImpact: %.1f"), Dot));
 	}
 
-	// This check is not robust enough.
-	// We'll have to sphere cast in front of us.
-	//if (NewRoll > TooSteep)
-	//{
-	//	if (Dot >= 0.0f)
-	//	{
-	//		// Trigger Collision / knock down
-	//		TriggerCrash(UpdatedRotation);
-	//	}
-	//}
+	if (NewRoll > TooSteep)
+	{
+		if (Dot >= 0.0f)
+		{
+			// Trigger Collision / knock down
+			TriggerCrash(UpdatedRotation);
+		}
+	}
 
 	if (GEngine)
 	{
