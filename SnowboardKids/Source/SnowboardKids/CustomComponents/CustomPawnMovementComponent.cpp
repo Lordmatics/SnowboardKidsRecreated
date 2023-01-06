@@ -335,12 +335,16 @@ void UCustomPawnMovementComponent::ProcessForwardMovement(float DeltaTime, FQuat
 	if (!bCharging && !bCharged && !bJumping && !bFalling && !bCrashed)
 	{
 
-		GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Input (X): %.1f"), InputVector.X));
-		GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Input (Y): %.1f"), InputVector.Y));
-		GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Input (Z): %.1f"), InputVector.Z));
+		if (ForwardSpeed >= MaxSpeed * 0.33f)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Input (X): %.1f"), InputVector.X));
+			GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Input (Y): %.1f"), InputVector.Y));
+			GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Input (Z): %.1f"), InputVector.Z));
 
-		FVector TurnVec = InputVector * HorizontalSpeed;
-		DeltaVec += TurnVec;
+			FVector TurnVec = InputVector * HorizontalSpeed;
+			DeltaVec += TurnVec;
+		}
+		
 	}
 
 	if (bFalling)
