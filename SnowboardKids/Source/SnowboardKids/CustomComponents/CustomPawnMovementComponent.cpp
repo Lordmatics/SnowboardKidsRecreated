@@ -905,7 +905,7 @@ FRotator UCustomPawnMovementComponent::OrientRotationToFloor(FQuat IncomingQuat,
 			// Rotate The Character
 			FRotator NewRotation;
 			NewRotation.Add(0.0f, RootYaw, 0.0f); // Z Will do slashes spin rotation lol.
-			RootComp->AddRelativeRotation(NewRotation);
+			RootComp->AddWorldRotation(NewRotation);
 		}
 	}
 
