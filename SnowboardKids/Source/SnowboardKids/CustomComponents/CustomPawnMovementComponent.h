@@ -169,6 +169,20 @@ public:
 	UPROPERTY(Transient)
 	USnowboarderAnimInstance* AnimInstance;
 
+	bool bNoSurfaceNormalFoundThisFrame;
+
+	UPROPERTY(EditAnywhere, Category = "Movement")
+	float MinHeightFromGround;
+
+	UPROPERTY(EditAnywhere, Category = "Movement")
+	float MaxHeightFromGround;
+
+	UPROPERTY(EditAnywhere, Category = "Movement")
+	float HeightFromGroundFactor;
+
+	UPROPERTY(EditAnywhere, Category = "Movement", meta = (ClampMin = 1.0))
+	float HeightAdjustScale;
+
 	bool bMatchRotToImpactNormal;
 	FVector ImpactPoint;
 	FVector ImpactNormal;

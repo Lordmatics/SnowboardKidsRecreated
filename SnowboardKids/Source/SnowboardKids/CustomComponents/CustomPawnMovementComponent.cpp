@@ -38,6 +38,13 @@ UCustomPawnMovementComponent::UCustomPawnMovementComponent()
 	bSouthInputIgnored = false;
 	bCrashed = false;
 
+	bNoSurfaceNormalFoundThisFrame = false;
+
+	MinHeightFromGround = 53.0f;
+	MaxHeightFromGround = 54.5f;
+	HeightFromGroundFactor = 0.0f;
+	HeightAdjustScale = 1.0f;
+
 	AirTime = 0.25f;
 	SphereCastRadius = 10.0f;
 
@@ -104,12 +111,12 @@ bool UCustomPawnMovementComponent::ProcessCrashed(float DeltaTime, FQuat Incomin
 	const FVector& OwnerForward = Owner->GetActorForwardVector();
 
 	// Create matrix relative to current state
-	FVector RightVector = FVector::CrossProduct(OwnerForward, FVector::UpVector);
-	FVector UpVector = FVector::CrossProduct(OwnerForward, RightVector);
+	//FVector RightVector = FVector::CrossProduct(OwnerForward, FVector::UpVector);
+	//FVector UpVector = FVector::CrossProduct(OwnerForward, RightVector);
 
 	// Determine objective forward vector
-	FVector LocalRightVector = FVector::CrossProduct(UpVector, FVector::ForwardVector);
-	FVector LocalForwardVector = FVector::CrossProduct(UpVector, LocalRightVector);
+	//FVector LocalRightVector = FVector::CrossProduct(UpVector, FVector::ForwardVector);
+	//FVector LocalForwardVector = FVector::CrossProduct(UpVector, LocalRightVector);
 
 	// Get Angle between our forward and the worlds forward.
 	// Then rotate worlds forward so it points in the direction of our forward
@@ -120,7 +127,7 @@ bool UCustomPawnMovementComponent::ProcessCrashed(float DeltaTime, FQuat Incomin
 	// Might be better to construct a more horizontal forward vec
 	// If we crash into something at an angle, we are going to bounce
 	// Which is not right.
-	FVector DeltaVec = RotatedForward * CrashSpeed;
+	FVector DeltaVec = OwnerForward * CrashSpeed;
 
 	// Reverse For Abit.
 	DeltaVec *= -1.0f;
@@ -129,71 +136,19 @@ bool UCustomPawnMovementComponent::ProcessCrashed(float DeltaTime, FQuat Incomin
 	FRotator RecoilRotation = RotationLastFrame;
 	RecoilRotation.Pitch = 0.0f;
 
-	//FRotator UpdatedRotation = IncomingQuat.Rotator();
-	//if (USceneComponent* RootComp = Owner->GetRootComponent())
-	//{
-	//	RootComp->SetRelativeRotation(FRotator::ZeroRotator);
-
-	//	// Set Rotation of board to match tilt.
-	//	RotateBoard(*Owner, 0.0f);
-
-	//	FRotator RootRotation = RootComp->GetComponentRotation();
-
-	//	// Fullpower at && YValue == 0.0f
-	//	// Much less when it's a value.
-	//	FVector RightVec = RootComp->GetRightVector();
-	//	FVector ForwardVec = RootComp->GetForwardVector();
-
-	//	// X
-	//	float NewPitch = UKismetMathLibrary::MakeRotFromXZ(ForwardVec, ImpactNormal).Roll;
-	//	// Y
-	//	float NewRoll = UKismetMathLibrary::MakeRotFromYZ(RightVec, ImpactNormal).Pitch;
-	//	// Z
-	//	float NewYaw = RootRotation.Yaw;
-
-	//	if (GEngine)
-	//	{
-	//		GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Pitch (X): %.1f"), NewPitch));
-	//		GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Roll (Y): %.1f"), NewRoll));
-	//		GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Yaw (Z): %.1f"), NewYaw));
-	//	}
-
-	//	// If we're going downhill, subtract a number
-	//	// If we're going uphill, add a number
-	//	FRotator FinalRot(NewRoll, NewPitch, NewYaw);
-	//	float InterpSpeed = InterpSpeedOrientToFloor;
-	//	FRotator InterpedRot = UKismetMathLibrary::RInterpTo(RootRotation, FinalRot, DeltaTime, InterpSpeedOrientToFloor);
-	//	InterpedRot.Roll = FMath::Clamp(InterpedRot.Roll, -BankXRotLimit, BankXRotLimit);
-	//	InterpedRot.Yaw = FMath::Clamp(InterpedRot.Yaw, -BankZRotLimit, BankZRotLimit);
-	//	float ExactPitch = NewRoll;
-	//	InterpedRot.Pitch = ExactPitch;
-
-	//	if (GEngine)
-	//	{
-	//		GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Crashed: %s"), bCrashed ? TEXT("True") : TEXT("False")));
-	//		GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("InterpedRotPitch (X): %.1f"), InterpedRot.Pitch));
-	//		GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("InterpedRotRoll (Y): %.1f"), InterpedRot.Roll));
-	//		GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("InterpedRotYaw (Z): %.1f"), InterpedRot.Yaw));
-	//	}
-
-	//	// We need to isolate the Z Rotation
-	//	UpdatedRotation = InterpedRot;
-	//	//float YawAtThisFrame = RootComp->GetComponentRotation().Yaw;
-	//	UpdatedRotation.Yaw = RootRotation.Yaw; // Need to enforce this so we can freely turn.
-	//}
-
 	FHitResult OutHit;
 	//DeltaVec.Normalize();
 	SafeMoveUpdatedComponent(DeltaVec, RecoilRotation, true, OutHit, ETeleportType::None);
 
-	//FVector DirToImpact = (ImpactPoint - OwnerLocation);
-	//DirToImpact.Normalize();
-	//float Dot = FVector::DotProduct(DeltaVec, DirToImpact);
-
-	//if (GEngine)
-	//{
-	//	GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Red, FString::Printf(TEXT("DotToImpact: %.1f"), Dot));
-	//}
+	if (!OutHit.bBlockingHit)
+	{
+		// Apply some psuedo gravity here.
+		SafeMoveUpdatedComponent(FVector::DownVector, RecoilRotation, true, OutHit, ETeleportType::None);
+	}
+	else
+	{
+		SafeMoveUpdatedComponent(FVector::UpVector * GravityScale * 0.5f, RecoilRotation, true, OutHit, ETeleportType::None);
+	}
 	return true;
 }
 
@@ -244,6 +199,8 @@ void UCustomPawnMovementComponent::ProcessJump(float DeltaTime)
 
 void UCustomPawnMovementComponent::ProcessGravity(float DeltaTime)
 {
+	bNoSurfaceNormalFoundThisFrame = false;
+
 	if (bJumping)
 	{
 		ConstrainToPlaneNormal(false);
@@ -263,7 +220,7 @@ void UCustomPawnMovementComponent::ProcessGravity(float DeltaTime)
 		//SetPlaneConstraintEnabled(false);
 		//ImpactNormal = FVector::UpVector;
 		SetGravityVector(GravityVec);	
-
+		ConstrainToPlaneNormal(false); // NOTE: This may or may not be correct
 		// NOTE: Be much better to recalibrate our characters Roll (forward/backward tilt) mid air, so we land with the board flat
 
 	}
@@ -272,7 +229,10 @@ void UCustomPawnMovementComponent::ProcessGravity(float DeltaTime)
 		// If we were falling, but now we're grounded.
 		// we effectively are 'landing' on this frame.
 		ConstrainToPlaneNormal(true);
+		ImpactPoint = Hitresult.ImpactPoint;
 		ImpactNormal = Hitresult.ImpactNormal;
+
+		DrawDebugLine(GetWorld(), Hitresult.ImpactPoint, Hitresult.ImpactPoint + (ImpactNormal.Normalize() * 45.0f), FColor::Green, false, 3.0f);
 		OnLanded();
 	}
 	else
@@ -282,9 +242,20 @@ void UCustomPawnMovementComponent::ProcessGravity(float DeltaTime)
 		if(SurfaceNormalFound)
 		{			
 			ConstrainToPlaneNormal(true);
+			ImpactPoint = Hitresult.ImpactPoint;
 			ImpactNormal = Hitresult.ImpactNormal;
+			DrawDebugLine(GetWorld(), Hitresult.ImpactPoint, Hitresult.ImpactPoint + (ImpactNormal.Normalize() * 40.0f), FColor::Blue, false, 3.0f);
 			//SetPlaneConstraintNormal(ImpactNormal);
+			bNoSurfaceNormalFoundThisFrame = false;
 		}	
+		else
+		{
+			bNoSurfaceNormalFoundThisFrame = true;
+			volatile int i = 5;
+			ImpactNormal = FVector::UpVector;
+			ImpactPoint = GetPawnOwner()->GetActorLocation();
+			//ConstrainToPlaneNormal(false);
+		}
 		//else
 		//{
 		//	ConstrainToPlaneNormal(false);
@@ -355,9 +326,7 @@ void UCustomPawnMovementComponent::ProcessForwardMovement(float DeltaTime, FQuat
 	float YValue = InputVector.Y;
 
 	// Continually move forward.
-	// TODO: Handle crashing and reaccelerating etc.
 	FVector DeltaVec = OwnerForward * ForwardSpeed;
-	FVector DeltaCopy = FVector::ZeroVector;
 	if (!bCharging && !bCharged)
 	{
 		FVector TurnVec = InputVector * HorizontalSpeed;
@@ -371,7 +340,26 @@ void UCustomPawnMovementComponent::ProcessForwardMovement(float DeltaTime, FQuat
 		DeltaVec.Z = 0.0f; // Need to make sure our velocity isn't larger than the gravity in the Z Direction
 		// Else we will fly.
 		DeltaVec += Gravity;
-		DeltaCopy += Gravity;
+	}
+	else
+	{
+		FVector Direction = ImpactPoint - Owner->GetActorLocation();
+		float Distance = Direction.Size();
+		float LocalMinHeightFromGround = MinHeightFromGround + HeightFromGroundFactor;
+		float LocalMaxHeightFromGround = MaxHeightFromGround + HeightFromGroundFactor;
+		if (Distance > LocalMaxHeightFromGround)
+		{
+			DeltaVec += FVector::DownVector * HeightAdjustScale;
+		}
+		else if (Distance < LocalMinHeightFromGround)
+		{
+			DeltaVec += FVector::UpVector * HeightAdjustScale;
+		}
+
+		if (GEngine)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Red, FString::Printf(TEXT("Dist To Floor: %.1f"), Distance));
+		}
 	}
 	
 	if (AnimInstance)
@@ -385,34 +373,23 @@ void UCustomPawnMovementComponent::ProcessForwardMovement(float DeltaTime, FQuat
 		}
 	}
 
+	//TODO: Fix bug whereby driving down a slope, and hitting a flat plane, causing a weird rotation spike, from the MakeRot function on the pitch.
+	// It seems to happen when there is no surface normal found and uses an old value for it.
 	// Handle Rotating slightly based on input.
 	float NewPitch = 0.0f;
 	FRotator UpdatedRotation = OrientRotationToFloor(IncomingQuat, *Owner, DeltaVec, YValue, NewPitch);
 	FHitResult HitResult;
-	ETeleportType TeleportType = ETeleportType::None;// : ETeleportType::ResetPhysics;
+	ETeleportType TeleportType = ETeleportType::None;
 	bool bSweep = true;
-	RotationLastFrame = UpdatedRotation;
 
-	// Recalculate forward movement, based on new rotation.
-	//FVector RotatedForward = OwnerForward;
-	//if (NewPitch != 0.0f)
-	//{
-	//	RotatedForward = RotatedForward.RotateAngleAxis(NewPitch, RightVec);
-	//	RotatedForward.Normalize();
-	//}
-	//DeltaCopy += RotatedForward *ForwardSpeed;	
-	SafeMoveUpdatedComponent(DeltaVec, UpdatedRotation, bSweep, HitResult, TeleportType);
-
-	// NOTE: We need to recalibrate our height, after each rotation
-	// In case we go down a slope, then go back to flat surface
-	// The sharp rotation will clip us under the floor.
-
-	float OwnerHeight = Owner->GetActorLocation().Z;
-	float ImpactHeight = ImpactPoint.Z;
-	if (ImpactHeight >= OwnerHeight)
+	float LastPitch = RotationLastFrame.Pitch;
+	float ThisPitch = UpdatedRotation.Pitch;
+	if (ThisPitch > LastPitch && ThisPitch >= 20.0f)
 	{
 		volatile int i = 5;
 	}
+	RotationLastFrame = UpdatedRotation;
+	SafeMoveUpdatedComponent(DeltaVec, UpdatedRotation, bSweep, HitResult, TeleportType);
 
 	if (HitResult.bBlockingHit)
 	{
@@ -426,26 +403,22 @@ void UCustomPawnMovementComponent::ProcessForwardMovement(float DeltaTime, FQuat
 		FRotator AdjustedRot = FRotator(AdjustedPitch, CurrentYaw, AdjustedRoll);
 		
 		FHitResult OutHit;
-		float TranslationX = (ForwardVector.X * 50.0f);
+		//float TranslationX = (ForwardVector.X * 50.0f);
 		float TranslationZ = UKismetMathLibrary::SafeDivide(FMath::Abs((Start - HitResult.ImpactPoint).Z), 2.5f);
-		FVector TranslationZDelta = FVector(TranslationX, 0.0f, TranslationZ);
-		SafeMoveUpdatedComponent(TranslationZDelta, AdjustedRot, true, OutHit, TeleportType);
+		FVector TranslationZDelta = FVector(0.0f, 0.0f, TranslationZ);
+		//SafeMoveUpdatedComponent(TranslationZDelta, AdjustedRot, true, OutHit, TeleportType);
 
 		if (OutHit.bBlockingHit)
 		{
 			TriggerCrash(AdjustedRot);
 		}
-
 	}
-	if(GetWorld())
-		DrawDebugLine(GetWorld(), OwnerLocation, OwnerLocation + DeltaCopy, FLinearColor::Red.ToFColor(true), false, 2.0f);
-
 }
 
 void UCustomPawnMovementComponent::ProcessDetectCollisions(float DeltaTime)
 {
 	bool bCollisionAhead = false;
-
+	
 	APawn* Owner = GetPawnOwner();
 	if (!Owner)
 	{
@@ -460,21 +433,15 @@ void UCustomPawnMovementComponent::ProcessDetectCollisions(float DeltaTime)
 
 	FHitResult HitResult;
 	TArray<AActor*> ActorsToIgnore;
-	FVector Start = Owner->GetActorLocation();
-	FVector ForwardVector = Owner->GetActorForwardVector();
-	FVector RightVector = Owner->GetActorRightVector();
-	//Start += FVector(0.0f, 0.0f, 5.0f);	
+	const FVector& Start = Owner->GetActorLocation();
+	const FVector& ForwardVector = Owner->GetActorForwardVector();
+	const FVector& RightVector = Owner->GetActorRightVector();
 	const FVector End = Start + (ForwardVector * CheckCollisionRayLength);
-	FCollisionQueryParams QueryParams;
-	QueryParams.AddIgnoredActor(Owner);
-
 	AActor* OwnerChar = Cast<AActor>(Owner);
 	ActorsToIgnore.Add(OwnerChar);
-
 	const bool bHit = UKismetSystemLibrary::SphereTraceSingle(GetOuter(), Start, End, SphereCastRadius, ETraceTypeQuery::TraceTypeQuery2, true,
 		ActorsToIgnore, EDrawDebugTrace::ForOneFrame, HitResult, true);
 
-	//const bool bHit = World->LineTraceSingleByChannel(Result, Start, End, ECollisionChannel::ECC_WorldStatic, QueryParams);
 	bool bPersistent = false;
 	float LifeTime = 1.0f;
 
@@ -532,40 +499,17 @@ void UCustomPawnMovementComponent::ProcessDetectCollisions(float DeltaTime)
 		// Projection = V1Dot UnitV2 * UnitV2, how much of V1 is on V2
 		const float AngleBetweenNormalAndUpRads = FVector::DotProduct(CollisionImpactNormal, FVector::UpVector);
 		const float AngleInDegrees = FMath::RadiansToDegrees(AngleBetweenNormalAndUpRads);
-		//const float Threshold = 3.14f * 0.25f;
 		const float AbsAngle = FMath::Abs(AngleInDegrees);
-		if (AngleInDegrees < 90.0f && AngleInDegrees > 0.0f)
+		if (AngleInDegrees < 90.0f && AngleInDegrees > 35.0f)
 		{
 			// Safe
-		}
-		else
-		{
-			TriggerCrash(RotationLastFrame);
-			return;
-		}
-		
+			float Dot = FVector::DotProduct(ForwardVector, CollisionImpactNormal);
 
-
-		float Dot = FVector::DotProduct(ForwardVector, CollisionImpactNormal);
-		// -0.99 is a 90 degree wall
-		// -0.92 for 100 degree wall / 10 degree slope
-		// -0.98 for 80 degree wall
-		// -0.93 for 70 degree wall
-		//if (Dot <= -0.55f)
-
-		// -0.9f crash
-		// -0.85f driving into the floor - maybe we should just update the rotation in this scenario?
-		//if (Dot <= -0.93f)
-		{
-			//TriggerCrash(RotationLastFrame);
-		//}
-		//else
-		//{
 			// Recalibrate rotation Based on inpact
 			// Create matrix relative to current state
 			float NewRoll = UKismetMathLibrary::MakeRotFromXZ(ForwardVector, CollisionImpactNormal).Roll;
 			float NewPitch = UKismetMathLibrary::MakeRotFromYZ(RightVector, CollisionImpactNormal).Pitch;
-			float CurrentYaw = RotationLastFrame.Yaw;			
+			float CurrentYaw = RotationLastFrame.Yaw;
 			FRotator AdjustedRot = FRotator(NewPitch, CurrentYaw, NewRoll);
 
 			FHitResult OutHit;
@@ -575,7 +519,11 @@ void UCustomPawnMovementComponent::ProcessDetectCollisions(float DeltaTime)
 			SafeMoveUpdatedComponent(TranslationZDelta, AdjustedRot, false, OutHit, ETeleportType::None);
 			//bAdjustedHack = true;
 		}
-		
+		else
+		{
+			TriggerCrash(RotationLastFrame);
+			return;
+		}
 	}
 }
 
@@ -682,28 +630,29 @@ bool UCustomPawnMovementComponent::IsGrounded(FHitResult& Result)
 
 	TArray<AActor*> ActorsToIgnore;
 	FVector Start = Owner->GetActorLocation();
-	if (const ASnowboardCharacterBase* SnowboardCharacter = Cast<ASnowboardCharacterBase>(Owner))
-	{
-		if (UStaticMeshComponent* Snowboard = SnowboardCharacter->GetSnowboard())
-		{
-			Start = Snowboard->GetComponentLocation();
-		}
-	}
+	const FVector& ForwardVector = Owner->GetActorForwardVector();
+	FVector Offset = ForwardVector * 45.0f;
+	FVector StartTwo = Start + Offset;
 
 	const float DeltaTime = World->GetDeltaSeconds();
-	//Start += FVector(0.0f, 0.0f, 5.0f);	
 	const FVector End = Start + (FVector::DownVector * CheckGroundRayLength);
+	const FVector EndTwo = StartTwo + (FVector::DownVector * CheckGroundRayLength);
+
 	FCollisionQueryParams QueryParams;
 	QueryParams.AddIgnoredActor(Owner);
 
 	AActor* OwnerChar = Cast<AActor>(Owner);
 	ActorsToIgnore.Add(OwnerChar);
 
-	const bool bHit = UKismetSystemLibrary::SphereTraceSingle(GetOuter(), Start, End, SphereCastRadius, ETraceTypeQuery::TraceTypeQuery2, true,
+	bool bHit = UKismetSystemLibrary::SphereTraceSingle(GetOuter(), StartTwo, EndTwo, SphereCastRadius, ETraceTypeQuery::TraceTypeQuery2, true,
 		ActorsToIgnore, EDrawDebugTrace::ForOneFrame, Result, true);
 
+	if (!bHit)
+	{
+		bHit = UKismetSystemLibrary::SphereTraceSingle(GetOuter(), Start, End, SphereCastRadius, ETraceTypeQuery::TraceTypeQuery2, true,
+			ActorsToIgnore, EDrawDebugTrace::ForOneFrame, Result, true);
+	}
 
-	//const bool bHit = World->LineTraceSingleByChannel(Result, Start, End, ECollisionChannel::ECC_WorldStatic, QueryParams);
 	bool bPersistent = true;
 	float LifeTime = 0.0f;
 
@@ -713,13 +662,6 @@ bool UCustomPawnMovementComponent::IsGrounded(FHitResult& Result)
 		{
 			GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Hit: %s"), *Result.GetActor()->GetName()));
 		}
-		ImpactPoint = Result.ImpactPoint;
-		// Probably need to update the rotation via the impact normal
-		
-		// Red up to the blocking hit, green thereafter
-		DrawDebugLine(World, Start, Result.ImpactPoint, FLinearColor::Red.ToFColor(true), bPersistent, LifeTime);
-		DrawDebugLine(World, Result.ImpactPoint, End, FLinearColor::Green.ToFColor(true), bPersistent, LifeTime);
-		DrawDebugPoint(World, Result.ImpactPoint, 16.0f, FLinearColor::Red.ToFColor(true), bPersistent, LifeTime);
 		return true;
 	}
 	else
@@ -729,10 +671,7 @@ bool UCustomPawnMovementComponent::IsGrounded(FHitResult& Result)
 			GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("NoHit")));
 		}
 
-		DrawDebugLine(World, Start, End, FLinearColor::Red.ToFColor(true), bPersistent, LifeTime);
-		return false;
-		// no hit means all red
-		
+		return false;		
 	}
 	return false;
 }
@@ -752,18 +691,18 @@ bool UCustomPawnMovementComponent::GetSurfaceNormal(FHitResult& Result)
 	}
 
 	FVector Start = Owner->GetActorLocation();
-	if (const ASnowboardCharacterBase* SnowboardCharacter = Cast<ASnowboardCharacterBase>(Owner))
-	{
-		if (UStaticMeshComponent* Snowboard = SnowboardCharacter->GetSnowboard())
-		{
-			Start = Snowboard->GetComponentLocation();
-		}
-	}
+	//if (const ASnowboardCharacterBase* SnowboardCharacter = Cast<ASnowboardCharacterBase>(Owner))
+	//{
+	//	if (UStaticMeshComponent* Snowboard = SnowboardCharacter->GetSnowboard())
+	//	{
+	//		Start = Snowboard->GetComponentLocation();
+	//	}
+	//}
+	const FVector& FowardVector = Owner->GetActorForwardVector();
+	//Start = Start + (FowardVector * 35.0f);
+
 	const float DeltaTime = World->GetDeltaSeconds();
-	//const FVector& Start = Owner->GetActorLocation() + FVector(0.0f, 0.0f, 0.0f);
-	//const FVector& Start = Snowboard->GetActorLocation() + FVector(0.0f, 0.0f, 0.0f);
-	
-	const FVector End = Start + (FVector::DownVector * SurfaceNormalRayLength);
+	FVector End = Start + (FVector::DownVector * SurfaceNormalRayLength);
 	FCollisionQueryParams QueryParams;
 	QueryParams.AddIgnoredActor(Owner);
 
@@ -771,12 +710,16 @@ bool UCustomPawnMovementComponent::GetSurfaceNormal(FHitResult& Result)
 	AActor* OwnerChar = Cast<AActor>(Owner);
 	ActorsToIgnore.Add(OwnerChar);
 
-	//SphereCastRadius
-	const bool bHit = UKismetSystemLibrary::SphereTraceSingle(GetOuter(), Start, End, SphereCastRadius, ETraceTypeQuery::TraceTypeQuery2, true,
-		ActorsToIgnore, EDrawDebugTrace::ForOneFrame, Result, true);
+	bool bHit = World->LineTraceSingleByChannel(Result, Start, End, ECollisionChannel::ECC_WorldDynamic, QueryParams);
+	if (!bHit)
+	{
+		Start = Start + FowardVector * 30.0f;
+		End = Start + (FVector::DownVector * SurfaceNormalRayLength);
+		bHit = World->LineTraceSingleByChannel(Result, Start, End, ECollisionChannel::ECC_WorldDynamic, QueryParams);
+	}
+	//const bool bHit = UKismetSystemLibrary::SphereTraceSingle(GetOuter(), Start, End, SphereCastRadius, ETraceTypeQuery::TraceTypeQuery2, true,
+	//	ActorsToIgnore, EDrawDebugTrace::ForOneFrame, Result, true);
 
-
-	//const bool bHit = World->LineTraceSingleByChannel(Result, Start, End, ECollisionChannel::ECC_WorldStatic, QueryParams);
 	bool bPersistent = true;
 	float LifeTime = 0.0f;
 
@@ -787,12 +730,10 @@ bool UCustomPawnMovementComponent::GetSurfaceNormal(FHitResult& Result)
 			GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Surface Hit: %s"), *Result.GetActor()->GetName()));
 		}
 
-		// Probably need to update the rotation via the impact normal
-
 		// Red up to the blocking hit, green thereafter
-		DrawDebugLine(World, Start, Result.ImpactPoint, FLinearColor::Red.ToFColor(true), bPersistent, LifeTime);
-		DrawDebugLine(World, Result.ImpactPoint, End, FLinearColor::Green.ToFColor(true), bPersistent, LifeTime);
-		DrawDebugPoint(World, Result.ImpactPoint, 16.0f, FLinearColor::Red.ToFColor(true), bPersistent, LifeTime);
+		//DrawDebugLine(World, Start, Result.ImpactPoint, FLinearColor::Red.ToFColor(true), bPersistent, LifeTime);
+		//DrawDebugLine(World, Result.ImpactPoint, End, FLinearColor::Green.ToFColor(true), bPersistent, LifeTime);
+		//DrawDebugPoint(World, Result.ImpactPoint, 16.0f, FLinearColor::Red.ToFColor(true), bPersistent, LifeTime);
 		return true;
 	}
 	else
@@ -935,8 +876,6 @@ FRotator UCustomPawnMovementComponent::OrientRotationToFloor(FQuat IncomingQuat,
 		return UpdatedRotation;
 	}
 	
-	//ConstrainToPlaneNormal(!bFalling);	
-
 	const float DeltaTime = World->GetDeltaSeconds();
 	// If there is input to strafe.
 	float RootYaw = FMath::Clamp(YValue, -TurnLimit, TurnLimit);
@@ -949,27 +888,26 @@ FRotator UCustomPawnMovementComponent::OrientRotationToFloor(FQuat IncomingQuat,
 			FRotator NewRotation;
 			NewRotation.Add(0.0f, RootYaw, 0.0f); // Z Will do slashes spin rotation lol.
 			RootComp->AddRelativeRotation(NewRotation);
-
-			// Set Rotation of board to match tilt.
-			//RotateBoard(Owner, YValue);
 		}
-	}
-	else
-	{
-		// Set Rotation of board to match tilt.
-		//RotateBoard(Owner, YValue);
 	}
 
 	RotateBoard(Owner, YValue);
 
 	const FVector& OwnerLocation = Owner.GetActorLocation();
-	FRotator RootRotation = RootComp->GetComponentRotation();
-	FVector RightVec = RootComp->GetRightVector();
-	FVector ForwardVec = RootComp->GetForwardVector();
+	const FRotator& RootRotation = RootComp->GetComponentRotation();
+	const FVector& RightVec = RootComp->GetRightVector();//Owner.GetActorRightVector();/*
+	const FVector& ForwardVec = RootComp->GetForwardVector();
+	FRotator LastFrame = RotationLastFrame;
 	// X - Forward
 	float NewRoll = UKismetMathLibrary::MakeRotFromXZ(ForwardVec, ImpactNormal).Roll;
-	// Y - Right
-	float NewPitch = UKismetMathLibrary::MakeRotFromYZ(RightVec, ImpactNormal).Pitch;
+	// Y - Right	
+	FRotator MakeRotFromYZ = UKismetMathLibrary::MakeRotFromYZ(RightVec, ImpactNormal);
+	float NewPitch = MakeRotFromYZ.Pitch;
+	if (NewPitch == 90.0f)
+	{
+		// We've hit a seam. Do not allow this to rotate.
+		NewPitch = LastFrame.Pitch;
+	}
 	PitchResult = NewPitch;
 	// Z - Up
 	float NewYaw = RootYaw;// RootRotation.Yaw;
@@ -983,17 +921,38 @@ FRotator UCustomPawnMovementComponent::OrientRotationToFloor(FQuat IncomingQuat,
 	float InterpSpeed = InterpSpeedOrientToFloor;
 	FRotator InterpedRot = UKismetMathLibrary::RInterpTo(RootRotation, FinalRot, DeltaTime, InterpSpeedOrientToFloor);
 	InterpedRot.Roll = FMath::Clamp(InterpedRot.Roll, -BankXRotLimit, BankXRotLimit);
-	InterpedRot.Yaw = FMath::Clamp(InterpedRot.Yaw, -BankZRotLimit, BankZRotLimit);	
+	//InterpedRot.Yaw = FMath::Clamp(InterpedRot.Yaw, -BankZRotLimit, BankZRotLimit);
 	InterpedRot.Pitch = NewPitch;
+	
+	// DEBUG
+	// Compare between this frame and teh last frame for too big of a change..
+	float LastPitch = LastFrame.Pitch;
+	float LastYaw = LastFrame.Yaw;
+	float LastRoll = LastFrame.Roll;
+	float Threshold = 30.0f;
 
-	FVector DirToImpact = (ImpactPoint - OwnerLocation);
-	DirToImpact.Normalize();
-	float Dot = FVector::DotProduct(DeltaVec, DirToImpact);
-
-	if (GEngine)
+	float PitchDiff = FMath::Abs(LastPitch - UpdatedRotation.Pitch);
+	float RollDiff = FMath::Abs(LastRoll - UpdatedRotation.Roll);
+	if (PitchDiff >= Threshold)
 	{
-		GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Red, FString::Printf(TEXT("DotToImpact: %.1f"), Dot));
+		volatile int i = 5;
+		InterpedRot.Pitch = LastFrame.Pitch + (PitchDiff * 0.5f);
 	}
+
+	if (RollDiff >= Threshold)
+	{
+		volatile int i = 5;
+		InterpedRot.Roll = LastFrame.Roll + (RollDiff * 0.5f);
+	}
+
+	if (LastPitch < 0.0f && InterpedRot.Pitch > 0.0f)
+	{
+		//InterpedRot.Pitch = -10.0f;
+		volatile int i = 5;
+	}
+
+	float PitchLimit = 25.0f;
+	InterpedRot.Pitch = FMath::Clamp(InterpedRot.Pitch, -PitchLimit, PitchLimit);
 
 	if (GEngine)
 	{
@@ -1005,11 +964,8 @@ FRotator UCustomPawnMovementComponent::OrientRotationToFloor(FQuat IncomingQuat,
 
 	// We need to isolate the Z Rotation
 	UpdatedRotation = InterpedRot;
-	if (YValue != 0.0f)
-	{
-		int i = 5;
-	}
 	UpdatedRotation.Yaw = RootComp->GetComponentRotation().Yaw;
-	//UpdatedRotation.Yaw = RootRotation.Yaw; // Need to enforce this so we can freely turn.
+	// Need to enforce this so we can freely turn.
+
 	return UpdatedRotation;
 }
