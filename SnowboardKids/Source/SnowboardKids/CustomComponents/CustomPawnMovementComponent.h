@@ -157,7 +157,6 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Movement")
 		UAnimMontage* CrashMontage;
 
-
 	bool bAdjustedHack = false;
 
 	UPROPERTY(EditAnywhere, Category = "Movement", meta = (ClampMin = 0.0, ClampMax = 1.0))
@@ -187,6 +186,7 @@ public:
 	FVector ImpactPoint;
 	FVector ImpactNormal;
 	FVector GravityVector;
+	FVector JumpVector;
 	FRotator RotationLastFrame;
 	FRotator CrashRot;
 };

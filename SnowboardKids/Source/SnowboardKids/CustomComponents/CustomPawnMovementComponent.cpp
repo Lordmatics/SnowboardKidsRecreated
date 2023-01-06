@@ -75,6 +75,7 @@ UCustomPawnMovementComponent::UCustomPawnMovementComponent()
 	SurfaceNormalRayLength = 5.0f;
 	CheckCollisionRayLength = 62.5f;
 
+	JumpVector = FVector::ZeroVector;
 	CrashRot = FRotator::ZeroRotator;
 	RotationLastFrame = FRotator::ZeroRotator;
 	TurnLimit = 0.5f; // This is literally the Turning Star on the original game, higher = more control.
@@ -95,7 +96,7 @@ bool UCustomPawnMovementComponent::ProcessCrashed(float DeltaTime, FQuat Incomin
 		bCrashed = false;
 		// Nuke speed - ready to start reaccelerating
 		ForwardSpeed = 0.0f;
-		return false;
+		return true;
 	}
 
 	APawn* Owner = GetPawnOwner();
@@ -134,7 +135,7 @@ bool UCustomPawnMovementComponent::ProcessCrashed(float DeltaTime, FQuat Incomin
 
 	// Need to reset our rotation
 	FRotator RecoilRotation = RotationLastFrame;
-	RecoilRotation.Pitch = 0.0f;
+	//RecoilRotation.Pitch = 0.0f;
 
 	FHitResult OutHit;
 	//DeltaVec.Normalize();
@@ -183,18 +184,21 @@ void UCustomPawnMovementComponent::ProcessJump(float DeltaTime)
 	}
 
 	// Add Vertical movement - and a bit of forward movement.
-	FVector JumpVector(FVector::UpVector);
-	JumpVector *= JumpScale * ChargedJumpFactor;
+	FVector JmpVec(FVector::UpVector);
+	JmpVec *= (JumpScale * ChargedJumpFactor);
 
 	// Only add forward movement, if we're not at max speed.
 	if (ForwardSpeed <= MaxSpeed)
 	{
 		FVector ForwardVector(FVector::ForwardVector);
 		ForwardVector *= JumpForwardScale * ChargedJumpFactor;
-		JumpVector += ForwardVector;
+		JmpVec += ForwardVector;
 	}
 	
-	AddInputVector(JumpVector);
+	JumpVector = JmpVec;	
+
+	FHitResult OutResult;
+	SafeMoveUpdatedComponent(JumpVector, RotationLastFrame, true, OutResult, ETeleportType::None);
 }
 
 void UCustomPawnMovementComponent::ProcessGravity(float DeltaTime)
@@ -322,15 +326,21 @@ void UCustomPawnMovementComponent::ProcessForwardMovement(float DeltaTime, FQuat
 	const FVector& RightVec = Owner->GetActorRightVector();
 	const FVector& OwnerForward = Owner->GetActorForwardVector();
 
-	const FVector& InputVector = ConsumeInputVector();
+	FVector InputVector = ConsumeInputVector();
+	InputVector.Y = FMath::Clamp(InputVector.Y, -1.0f, 1.0f);
 	float YValue = InputVector.Y;
 
 	// Continually move forward.
 	FVector DeltaVec = OwnerForward * ForwardSpeed;
-	if (!bCharging && !bCharged)
+	if (!bCharging && !bCharged && !bJumping && !bFalling && !bCrashed)
 	{
+
+		GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Input (X): %.1f"), InputVector.X));
+		GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Input (Y): %.1f"), InputVector.Y));
+		GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Input (Z): %.1f"), InputVector.Z));
+
 		FVector TurnVec = InputVector * HorizontalSpeed;
-		//DeltaVec += TurnVec;
+		DeltaVec += TurnVec;
 	}
 
 	if (bFalling)
@@ -378,6 +388,12 @@ void UCustomPawnMovementComponent::ProcessForwardMovement(float DeltaTime, FQuat
 	// Handle Rotating slightly based on input.
 	float NewPitch = 0.0f;
 	FRotator UpdatedRotation = OrientRotationToFloor(IncomingQuat, *Owner, DeltaVec, YValue, NewPitch);
+
+	if (bJumping)
+	{
+		UpdatedRotation.Roll = IncomingQuat.Rotator().Roll;
+		UpdatedRotation.Pitch = IncomingQuat.Rotator().Pitch;
+	}
 	FHitResult HitResult;
 	ETeleportType TeleportType = ETeleportType::None;
 	bool bSweep = true;
@@ -572,6 +588,7 @@ void UCustomPawnMovementComponent::TriggerJump()
 		bChargedJumping = true;
 	}
 
+	ConstrainToPlaneNormal(false);
 	CancelCharge();
 
 	bJumping = true;
@@ -749,6 +766,7 @@ void UCustomPawnMovementComponent::OnLanded()
 	{
 		CancelCharge();
 	}
+	ConstrainToPlaneNormal(true);
 	bFalling = false;
 }
 
