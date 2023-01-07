@@ -23,11 +23,11 @@
 
 UCustomPawnMovementComponent::UCustomPawnMovementComponent()
 {	
-	ForwardSpeed = 5.0f;
+	ForwardSpeed = 10.0f;
 	CrashSpeed = 2.0f;
-	HorizontalSpeed = 1.25f;
+	HorizontalSpeed = 2.5f;
 	Acceleration = 1.0f;
-	MaxSpeed = 8.0f;
+	MaxSpeed = 16.0f;
 	MaxSpeedWhenCharged = 20.0f;
 	bMovingForward = false;
 	bTurning = false;
@@ -40,13 +40,13 @@ UCustomPawnMovementComponent::UCustomPawnMovementComponent()
 
 	bNoSurfaceNormalFoundThisFrame = false;
 
-	MinHeightFromGround = 53.0f;
-	MaxHeightFromGround = 54.5f;
+	MinHeightFromGround = 54.0f;
+	MaxHeightFromGround = 55.5f;
 	HeightFromGroundFactor = 0.0f;
 	HeightAdjustScale = 1.0f;
 
-	AirTime = 0.25f;
-	SphereCastRadius = 10.0f;
+	AirTime = 0.0225f;
+	SphereCastRadius = 30.0f;
 
 	JumpTimer = 0.0f;
 	JumpApexTime = 0.35f; // Variable depending on skill.
@@ -54,8 +54,8 @@ UCustomPawnMovementComponent::UCustomPawnMovementComponent()
 	ChargeTimer = 0.0f;
 	ChargeApexTime = 2.5f;
 
-	GravityScale = 2.75f;
-	JumpScale = 3.0f;
+	GravityScale = 3.9f;
+	JumpScale = 6.0f;
 	JumpForwardScale = 2.0f;
 
 	LeftBoardRot = 5.0f;
@@ -71,9 +71,9 @@ UCustomPawnMovementComponent::UCustomPawnMovementComponent()
 	CrashTimer = 0.0f;
 	CrashDuration = 1.2f;
 
-	CheckGroundRayLength = 5.0f;
-	SurfaceNormalRayLength = 5.0f;
-	CheckCollisionRayLength = 62.5f;
+	CheckGroundRayLength = 42.5f;
+	SurfaceNormalRayLength = 100.0f;
+	CheckCollisionRayLength = 70.0f;
 
 	JumpVector = FVector::ZeroVector;
 	CrashRot = FRotator::ZeroRotator;
@@ -266,20 +266,23 @@ void UCustomPawnMovementComponent::ProcessGravity(float DeltaTime)
 		//}
 	}
 
+#if defined DEBUG_SNOWBOARD_KIDS
 	if (GEngine)
 	{
 		GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Falling: %s"), bIsGrounded ? TEXT("False") : TEXT("True")));
 		GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("OrientingToGround: %s"), bMatchRotToImpactNormal ? TEXT("True") : TEXT("False")));
-
 	}
+#endif
 }
 
 void UCustomPawnMovementComponent::ProcessAcceleration(float DeltaTime)
 {
+#if defined DEBUG_SNOWBOARD_KIDS
 	if (GEngine)
 	{
 		GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Speed: %.1f, Max: %.1f"), ForwardSpeed, MaxSpeed));
 	}
+#endif
 
 	ForwardSpeed += Acceleration * DeltaTime;
 	ForwardSpeed = FMath::Clamp(ForwardSpeed, 0.0f, MaxSpeed);
@@ -287,11 +290,13 @@ void UCustomPawnMovementComponent::ProcessAcceleration(float DeltaTime)
 
 void UCustomPawnMovementComponent::ProcessCharging(float DeltaTime)
 {
+#if defined DEBUG_SNOWBOARD_KIDS
 	if (GEngine)
 	{
 		GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Charged: %s"), bCharged ? TEXT("True"):TEXT("False")));
 		GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Charging: %s, Timer: %.1f"), bCharging ? TEXT("True") : TEXT("False"), ChargeTimer));
 	}
+#endif
 
 	if (bCharged)
 	{
@@ -334,17 +339,16 @@ void UCustomPawnMovementComponent::ProcessForwardMovement(float DeltaTime, FQuat
 	FVector DeltaVec = OwnerForward * ForwardSpeed;
 	if (!bCharging && !bCharged && !bJumping && !bFalling && !bCrashed)
 	{
-
 		if (ForwardSpeed >= MaxSpeed * 0.33f)
 		{
+#if defined DEBUG_SNOWBOARD_KIDS
 			GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Input (X): %.1f"), InputVector.X));
 			GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Input (Y): %.1f"), InputVector.Y));
 			GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Input (Z): %.1f"), InputVector.Z));
-
+#endif
 			FVector TurnVec = InputVector * HorizontalSpeed;
 			DeltaVec += TurnVec;
-		}
-		
+		}	
 	}
 
 	if (bFalling)
@@ -370,21 +374,25 @@ void UCustomPawnMovementComponent::ProcessForwardMovement(float DeltaTime, FQuat
 			DeltaVec += FVector::UpVector * HeightAdjustScale;
 		}
 
+#if defined DEBUG_SNOWBOARD_KIDS
 		if (GEngine)
 		{
 			GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Red, FString::Printf(TEXT("Dist To Floor: %.1f"), Distance));
 		}
+#endif
 	}
 	
 	if (AnimInstance)
 	{
 		AnimInstance->SetSpeed(ForwardSpeed);				
 		AnimInstance->SetTilt(YValue);	
+#if defined DEBUG_SNOWBOARD_KIDS
 		if (GEngine)
 		{
 			GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("ForwardSpeed: %.1f"), ForwardSpeed));
 			GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("YValue: %.1f"), YValue));
 		}
+#endif
 	}
 
 	//TODO: Fix bug whereby driving down a slope, and hitting a flat plane, causing a weird rotation spike, from the MakeRot function on the pitch.
@@ -411,28 +419,28 @@ void UCustomPawnMovementComponent::ProcessForwardMovement(float DeltaTime, FQuat
 	RotationLastFrame = UpdatedRotation;
 	SafeMoveUpdatedComponent(DeltaVec, UpdatedRotation, bSweep, HitResult, TeleportType);
 
-	if (HitResult.bBlockingHit)
-	{
-		FVector HitNormal = HitResult.ImpactNormal;
-		const FVector& Start = Owner->GetActorLocation();
-		const FVector& ForwardVector = Owner->GetActorForwardVector();
-		const FVector& RightVector = Owner->GetActorRightVector();
-		float AdjustedRoll = UKismetMathLibrary::MakeRotFromXZ(ForwardVector, HitNormal).Roll;
-		float AdjustedPitch = UKismetMathLibrary::MakeRotFromYZ(RightVector, HitNormal).Pitch;
-		float CurrentYaw = UpdatedRotation.Yaw;
-		FRotator AdjustedRot = FRotator(AdjustedPitch, CurrentYaw, AdjustedRoll);
-		
-		FHitResult OutHit;
-		//float TranslationX = (ForwardVector.X * 50.0f);
-		float TranslationZ = UKismetMathLibrary::SafeDivide(FMath::Abs((Start - HitResult.ImpactPoint).Z), 2.5f);
-		FVector TranslationZDelta = FVector(0.0f, 0.0f, TranslationZ);
-		//SafeMoveUpdatedComponent(TranslationZDelta, AdjustedRot, true, OutHit, TeleportType);
+	//if (HitResult.bBlockingHit)
+	//{
+	//	FVector HitNormal = HitResult.ImpactNormal;
+	//	const FVector& Start = Owner->GetActorLocation();
+	//	const FVector& ForwardVector = Owner->GetActorForwardVector();
+	//	const FVector& RightVector = Owner->GetActorRightVector();
+	//	float AdjustedRoll = UKismetMathLibrary::MakeRotFromXZ(ForwardVector, HitNormal).Roll;
+	//	float AdjustedPitch = UKismetMathLibrary::MakeRotFromYZ(RightVector, HitNormal).Pitch;
+	//	float CurrentYaw = UpdatedRotation.Yaw;
+	//	FRotator AdjustedRot = FRotator(AdjustedPitch, CurrentYaw, AdjustedRoll);
+	//	
+	//	FHitResult OutHit;
+	//	//float TranslationX = (ForwardVector.X * 50.0f);
+	//	float TranslationZ = UKismetMathLibrary::SafeDivide(FMath::Abs((Start - HitResult.ImpactPoint).Z), 2.5f);
+	//	FVector TranslationZDelta = FVector(0.0f, 0.0f, TranslationZ);
+	//	//SafeMoveUpdatedComponent(TranslationZDelta, AdjustedRot, true, OutHit, TeleportType);
 
-		if (OutHit.bBlockingHit)
-		{
-			TriggerCrash(AdjustedRot);
-		}
-	}
+	//	if (OutHit.bBlockingHit)
+	//	{
+	//		TriggerCrash(AdjustedRot);
+	//	}
+	//}
 }
 
 void UCustomPawnMovementComponent::ProcessDetectCollisions(float DeltaTime)
@@ -467,10 +475,12 @@ void UCustomPawnMovementComponent::ProcessDetectCollisions(float DeltaTime)
 
 	if (bHit && HitResult.bBlockingHit)
 	{
+#if defined DEBUG_SNOWBOARD_KIDS
 		if (GEngine && HitResult.GetActor())
 		{
 			GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Hit: %s"), *HitResult.GetActor()->GetName()));
 		}
+#endif
 
 		// Red up to the blocking hit, green thereafter
 		DrawDebugLine(World, Start, HitResult.ImpactPoint, FLinearColor::Red.ToFColor(true), bPersistent, LifeTime);
@@ -481,10 +491,12 @@ void UCustomPawnMovementComponent::ProcessDetectCollisions(float DeltaTime)
 	}
 	else
 	{
+#if defined DEBUG_SNOWBOARD_KIDS
 		if (GEngine)
 		{
 			GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("NoHit")));
 		}
+#endif
 
 		DrawDebugLine(World, Start, End, FLinearColor::Red.ToFColor(true), bPersistent, LifeTime);
 	}
@@ -679,18 +691,22 @@ bool UCustomPawnMovementComponent::IsGrounded(FHitResult& Result)
 
 	if (bHit && Result.bBlockingHit)
 	{
+#if defined DEBUG_SNOWBOARD_KIDS
 		if (GEngine && Result.GetActor())
 		{
 			GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Hit: %s"), *Result.GetActor()->GetName()));
 		}
+#endif
 		return true;
 	}
 	else
 	{
+#if defined DEBUG_SNOWBOARD_KIDS
 		if (GEngine)
 		{
 			GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("NoHit")));
 		}
+#endif
 
 		return false;		
 	}
@@ -746,10 +762,12 @@ bool UCustomPawnMovementComponent::GetSurfaceNormal(FHitResult& Result)
 
 	if (bHit && Result.bBlockingHit)
 	{
+#if defined DEBUG_SNOWBOARD_KIDS
 		if (GEngine && Result.GetActor())
 		{
 			GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Surface Hit: %s"), *Result.GetActor()->GetName()));
 		}
+#endif
 
 		// Red up to the blocking hit, green thereafter
 		//DrawDebugLine(World, Start, Result.ImpactPoint, FLinearColor::Red.ToFColor(true), bPersistent, LifeTime);
@@ -897,7 +915,7 @@ FRotator UCustomPawnMovementComponent::OrientRotationToFloor(FQuat IncomingQuat,
 	{
 		return UpdatedRotation;
 	}
-	
+
 	const float DeltaTime = World->GetDeltaSeconds();
 	// If there is input to strafe.
 	float RootYaw = FMath::Clamp(YValue, -TurnLimit, TurnLimit);
@@ -909,7 +927,14 @@ FRotator UCustomPawnMovementComponent::OrientRotationToFloor(FQuat IncomingQuat,
 			// Rotate The Character
 			FRotator NewRotation;
 			NewRotation.Add(0.0f, RootYaw, 0.0f); // Z Will do slashes spin rotation lol.
-			RootComp->AddWorldRotation(NewRotation);
+			if (bFalling)
+			{
+				RootComp->AddRelativeRotation(NewRotation);
+			}
+			else
+			{
+				RootComp->AddWorldRotation(NewRotation);
+			}			
 		}
 	}
 
@@ -917,7 +942,7 @@ FRotator UCustomPawnMovementComponent::OrientRotationToFloor(FQuat IncomingQuat,
 
 	const FVector& OwnerLocation = Owner.GetActorLocation();
 	const FRotator& RootRotation = RootComp->GetComponentRotation();
-	const FVector& RightVec = RootComp->GetRightVector();//Owner.GetActorRightVector();/*
+	const FVector& RightVec = RootComp->GetRightVector();
 	const FVector& ForwardVec = RootComp->GetForwardVector();
 	FRotator LastFrame = RotationLastFrame;
 	// X - Forward
@@ -933,12 +958,14 @@ FRotator UCustomPawnMovementComponent::OrientRotationToFloor(FQuat IncomingQuat,
 	PitchResult = NewPitch;
 	// Z - Up
 	float NewYaw = RootYaw;// RootRotation.Yaw;
+#if defined DEBUG_SNOWBOARD_KIDS
 	if (GEngine)
 	{
 		GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Roll (X): %.1f"), NewRoll));
 		GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Pitch (Y): %.1f"), NewPitch));
 		GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Yaw (Z): %.1f"), NewYaw));
 	}
+#endif
 	FRotator FinalRot(NewPitch, NewRoll, NewYaw);
 	float InterpSpeed = InterpSpeedOrientToFloor;
 	FRotator InterpedRot = UKismetMathLibrary::RInterpTo(RootRotation, FinalRot, DeltaTime, InterpSpeedOrientToFloor);
@@ -976,6 +1003,7 @@ FRotator UCustomPawnMovementComponent::OrientRotationToFloor(FQuat IncomingQuat,
 	float PitchLimit = 25.0f;
 	InterpedRot.Pitch = FMath::Clamp(InterpedRot.Pitch, -PitchLimit, PitchLimit);
 
+#if defined DEBUG_SNOWBOARD_KIDS
 	if (GEngine)
 	{
 		GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Crashed: %s"), bCrashed ? TEXT("True") : TEXT("False")));
@@ -983,6 +1011,7 @@ FRotator UCustomPawnMovementComponent::OrientRotationToFloor(FQuat IncomingQuat,
 		GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("InterpedRotRoll (Y): %.1f"), InterpedRot.Roll));
 		GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("InterpedRotYaw (Z): %.1f"), InterpedRot.Yaw));
 	}
+#endif
 
 	// We need to isolate the Z Rotation
 	UpdatedRotation = InterpedRot;

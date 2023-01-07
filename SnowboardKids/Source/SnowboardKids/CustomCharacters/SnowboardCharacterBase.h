@@ -31,6 +31,8 @@ namespace SocketNames
 	const FName FootSocket = FName(TEXT("FootSocket"));
 }
 
+//#define DEBUG_SNOWBOARD_KIDS
+
 UCLASS()
 class SNOWBOARDKIDS_API ASnowboardCharacterBase : public APawn, public ICharacterInterface
 {
@@ -78,6 +80,11 @@ public:
 	virtual bool ConsumeItemUtility() override;
 	// End Interface
 
+	FORCEINLINE bool IsAIControlled() const { return bIsAIControlled; }
+	FORCEINLINE void SetIsAI(bool IsAI) { bIsAIControlled = IsAI; }
+
+	void SetController(AController* InController);
+
 private:
 	virtual void BeginPlay() override;	
 	virtual void Tick(float DeltaTime) override;
@@ -120,5 +127,6 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Character", meta = (AllowPrivateAccess = "true"))
 		bool bRotationDisabled;
 
-
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Character", meta = (AllowPrivateAccess = "true"))
+		bool bIsAIControlled;
 };

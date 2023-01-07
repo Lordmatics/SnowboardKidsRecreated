@@ -31,3 +31,14 @@ void UAIWorldSubsystem::UnregisterCheckpoint(AMapCheckpoint* Checkpoint)
 {
 	Checkpoints.RemoveSingle(Checkpoint);
 }
+
+AMapCheckpoint* UAIWorldSubsystem::GetCheckpointAtIndex(const int Index) const
+{
+	const int Size = Checkpoints.Num();
+	if (Index >= Size || Index < 0)
+	{
+		return nullptr;
+	}
+
+	return Checkpoints[Index];
+}

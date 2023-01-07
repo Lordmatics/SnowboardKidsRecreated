@@ -15,6 +15,7 @@
 #include "SnowboardKids/CustomComponents/CustomPawnMovementComponent.h"
 #include "SnowboardKids/Animation/SnowboarderAnimInstance.h"
 #include <Animation/AnimMontage.h>
+#include "../Controllers/SnowboardAIController.h"
 
 // Sets default values
 ASnowboardCharacterBase::ASnowboardCharacterBase(const FObjectInitializer& ObjectInitializer) :
@@ -22,7 +23,8 @@ ASnowboardCharacterBase::ASnowboardCharacterBase(const FObjectInitializer& Objec
 	BaseTurnRate(45.0f),
 	BaseLookUpRate(45.0f),
 	bMovementDisabled(false),
-	bRotationDisabled(false)
+	bRotationDisabled(false),
+	bIsAIControlled(false)
 {
  	// Set this pawn to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;	
@@ -124,6 +126,13 @@ void ASnowboardCharacterBase::BeginPlay()
 {
 	Super::BeginPlay();
 	
+
+	auto Control = GetController();
+
+	auto CastControl = Cast<ASnowboardAIController>(GetController());
+
+	auto SecondCast = GetController<ASnowboardAIController>();
+
 	if (DynamicMaterials.Num() > 0)
 	{
 		DynamicMaterials.Empty();
@@ -172,6 +181,11 @@ void ASnowboardCharacterBase::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	//if (!IsAIControlled())
+	//{
+	//	return;
+	//}
+
 	if (UCustomPawnMovementComponent* CharacterMovementComponent = GetCharacterMovement())
 	{
 		const bool bMovementIgnored = CharacterMovementComponent->IsMoveInputIgnored();
@@ -181,11 +195,13 @@ void ASnowboardCharacterBase::Tick(float DeltaTime)
 		const FQuat& Rotation = GetCapsuleComponent()->GetComponentQuat();
 		CharacterMovementComponent->ProcessMovement(DeltaTime, Rotation);
 
+#if defined DEBUG_SNOWBOARD_KIDS
 		if (GEngine)
 		{
 			GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Ignored: %s"), bMovementIgnored ? TEXT("True") : TEXT("False")));
 			GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Vel: X: %.1f, Y: %.1f, Z: %.1f"), Vel.X, Vel.Y, Vel.Z));
 		}
+#endif
 	}
 }
 
@@ -400,4 +416,9 @@ bool ASnowboardCharacterBase::ConsumeItemOffensive()
 bool ASnowboardCharacterBase::ConsumeItemUtility()
 {
 	return false;
+}
+
+void ASnowboardCharacterBase::SetController(AController* InController)
+{
+	Controller = InController;	
 }

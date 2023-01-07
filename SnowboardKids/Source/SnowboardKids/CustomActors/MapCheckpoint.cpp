@@ -5,6 +5,7 @@
 #include "SnowboardKids/CustomCharacters/SnowboardCharacterBase.h"
 #include <Components/BoxComponent.h>
 #include "../Systems/WorldSystems/AIWorldSubsystem.h"
+#include "../Controllers/SnowboardAIController.h"
 
 // Sets default values
 AMapCheckpoint::AMapCheckpoint() :
@@ -35,6 +36,7 @@ void AMapCheckpoint::BeginPlay()
 	if (TriggerArea)
 	{
 		TriggerArea->OnComponentBeginOverlap.AddDynamic(this, &AMapCheckpoint::OnTriggerOverlap);
+		TriggerArea->OnComponentEndOverlap.AddDynamic(this, &AMapCheckpoint::OnTriggerOverlapEnd);
 	}
 
 	if (UAIWorldSubsystem* AIWorldSystem = UAIWorldSubsystem::GetAISystem(GetWorld()))
@@ -50,6 +52,7 @@ void AMapCheckpoint::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	if (TriggerArea)
 	{
 		TriggerArea->OnComponentBeginOverlap.RemoveDynamic(this, &AMapCheckpoint::OnTriggerOverlap);
+		TriggerArea->OnComponentEndOverlap.RemoveDynamic(this, &AMapCheckpoint::OnTriggerOverlapEnd);
 	}
 
 	if (UAIWorldSubsystem* AIWorldSystem = UAIWorldSubsystem::GetAISystem(GetWorld()))
@@ -67,6 +70,11 @@ void AMapCheckpoint::Tick(float DeltaTime)
 
 void AMapCheckpoint::OnTriggerOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
+	if (bOverlapped)
+	{
+		return;
+	}
+
 	if (!OtherActor)
 	{
 		return;
@@ -77,7 +85,24 @@ void AMapCheckpoint::OnTriggerOverlap(UPrimitiveComponent* OverlappedComponent, 
 	{
 		return;
 	}
+	
+	AController* Controller = SnowboardCharacter->GetController();
+	ASnowboardAIController* AIController = Cast<ASnowboardAIController>(Controller);
+	if (!AIController)
+	{
+		return;
+	}
 
+	bOverlapped = true;
+
+	UE_LOG(LogTemp, Log, TEXT("Overlap Start"));
+	AIController->OnCheckpointReached();
 	// Tell AI to Update their heading to the next checkpoint.
+}
+
+void AMapCheckpoint::OnTriggerOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
+{
+	UE_LOG(LogTemp, Log, TEXT("Overlap End"));
+	bOverlapped = false;
 }
 

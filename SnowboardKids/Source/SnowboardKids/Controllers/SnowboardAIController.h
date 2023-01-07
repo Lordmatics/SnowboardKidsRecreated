@@ -7,6 +7,8 @@
 #include "SnowboardAIController.generated.h"
 
 class ASnowboardCharacterBase;
+class AMapCheckpoint;
+class AAICheckpointNode;
 
 /**
  * 
@@ -20,13 +22,30 @@ class SNOWBOARDKIDS_API ASnowboardAIController : public AAIController
 
 public:
 
+	void OnCheckpointReached();
+
 protected:
 
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaSeconds) override;
 
+	virtual void OnPossess(APawn* InPawn) override;
+	virtual void OnUnPossess() override;
+
+	void UpdateCheckpoint();
+
+	const FVector GetFloorPositionFromNode(const AAICheckpointNode& Node);
 private:
 
 	UPROPERTY(Transient)
 	ASnowboardCharacterBase* PossessedPawn;
+
+	UPROPERTY(Transient)
+	AMapCheckpoint* CurrentCheckpoint;
+
+	UPROPERTY(Transient)
+	AAICheckpointNode* CurrentNode;
+
+	int CurrentCheckpointIndex;
+	FVector CurrentNodeLocation;
 };

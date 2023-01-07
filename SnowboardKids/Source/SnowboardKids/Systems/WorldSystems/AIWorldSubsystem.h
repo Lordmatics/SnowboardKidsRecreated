@@ -32,6 +32,10 @@ public:
 	void RegisterCheckpoint(AMapCheckpoint* Checkpoint);
 	void UnregisterCheckpoint(AMapCheckpoint* Checkpoint);
 
+	FORCEINLINE const int GetTotalCheckpoints() const { return Checkpoints.Num(); }
+
+	AMapCheckpoint* GetCheckpointAtIndex(const int Index) const;
+
 private:
 
 	UPROPERTY(Transient)
