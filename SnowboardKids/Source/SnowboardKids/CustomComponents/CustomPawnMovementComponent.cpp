@@ -236,7 +236,7 @@ void UCustomPawnMovementComponent::ProcessGravity(float DeltaTime)
 		ImpactPoint = Hitresult.ImpactPoint;
 		ImpactNormal = Hitresult.ImpactNormal;
 
-		DrawDebugLine(GetWorld(), Hitresult.ImpactPoint, Hitresult.ImpactPoint + (ImpactNormal.Normalize() * 45.0f), FColor::Green, false, 3.0f);
+		//DrawDebugLine(GetWorld(), Hitresult.ImpactPoint, Hitresult.ImpactPoint + (ImpactNormal.Normalize() * 45.0f), FColor::Green, false, 3.0f);
 		OnLanded();
 	}
 	else
@@ -248,7 +248,7 @@ void UCustomPawnMovementComponent::ProcessGravity(float DeltaTime)
 			ConstrainToPlaneNormal(true);
 			ImpactPoint = Hitresult.ImpactPoint;
 			ImpactNormal = Hitresult.ImpactNormal;
-			DrawDebugLine(GetWorld(), Hitresult.ImpactPoint, Hitresult.ImpactPoint + (ImpactNormal.Normalize() * 40.0f), FColor::Blue, false, 3.0f);
+			//DrawDebugLine(GetWorld(), Hitresult.ImpactPoint, Hitresult.ImpactPoint + (ImpactNormal.Normalize() * 40.0f), FColor::Blue, false, 3.0f);
 			//SetPlaneConstraintNormal(ImpactNormal);
 			bNoSurfaceNormalFoundThisFrame = false;
 		}	
@@ -401,6 +401,17 @@ void UCustomPawnMovementComponent::ProcessForwardMovement(float DeltaTime, FQuat
 	float NewPitch = 0.0f;
 	FRotator UpdatedRotation = OrientRotationToFloor(IncomingQuat, *Owner, DeltaVec, YValue, NewPitch);
 
+	// This bounces from - 180 and 180 alot when rotating
+	//float YawLastFrame = RotationLastFrame.Yaw;
+	//float YawThisFrame = UpdatedRotation.Yaw;
+	//float DiffYaw = FMath::Abs(YawThisFrame - YawLastFrame);
+	//if (DiffYaw > 90.0f)
+	//{
+	//	volatile int i = 5;
+	//	//UpdatedRotation.Yaw = IncomingQuat.Rotator().Yaw;
+	//	//UE_LOG(LogTemp, Warning, TEXT("Yaw Delta Too Large > 90.0f, Last: %.1f, This: %.1f"), YawLastFrame, YawThisFrame);
+	//}
+
 	if (bJumping)
 	{
 		UpdatedRotation.Roll = IncomingQuat.Rotator().Roll;
@@ -417,6 +428,8 @@ void UCustomPawnMovementComponent::ProcessForwardMovement(float DeltaTime, FQuat
 		volatile int i = 5;
 	}
 	RotationLastFrame = UpdatedRotation;
+
+	//FQuat RotAsQuat = UpdatedRotation.Quaternion();
 	SafeMoveUpdatedComponent(DeltaVec, UpdatedRotation, bSweep, HitResult, TeleportType);
 
 	//if (HitResult.bBlockingHit)
@@ -468,7 +481,7 @@ void UCustomPawnMovementComponent::ProcessDetectCollisions(float DeltaTime)
 	AActor* OwnerChar = Cast<AActor>(Owner);
 	ActorsToIgnore.Add(OwnerChar);
 	const bool bHit = UKismetSystemLibrary::SphereTraceSingle(GetOuter(), Start, End, SphereCastRadius, ETraceTypeQuery::TraceTypeQuery2, true,
-		ActorsToIgnore, EDrawDebugTrace::ForOneFrame, HitResult, true);
+		ActorsToIgnore, EDrawDebugTrace::None, HitResult, true);
 
 	bool bPersistent = false;
 	float LifeTime = 1.0f;
@@ -483,9 +496,9 @@ void UCustomPawnMovementComponent::ProcessDetectCollisions(float DeltaTime)
 #endif
 
 		// Red up to the blocking hit, green thereafter
-		DrawDebugLine(World, Start, HitResult.ImpactPoint, FLinearColor::Red.ToFColor(true), bPersistent, LifeTime);
-		DrawDebugLine(World, HitResult.ImpactPoint, End, FLinearColor::Green.ToFColor(true), bPersistent, LifeTime);
-		DrawDebugPoint(World, HitResult.ImpactPoint, 16.0f, FLinearColor::Red.ToFColor(true), bPersistent, LifeTime);
+		//DrawDebugLine(World, Start, HitResult.ImpactPoint, FLinearColor::Red.ToFColor(true), bPersistent, LifeTime);
+		//DrawDebugLine(World, HitResult.ImpactPoint, End, FLinearColor::Green.ToFColor(true), bPersistent, LifeTime);
+		//DrawDebugPoint(World, HitResult.ImpactPoint, 16.0f, FLinearColor::Red.ToFColor(true), bPersistent, LifeTime);
 
 		bCollisionAhead = true;
 	}
@@ -498,7 +511,7 @@ void UCustomPawnMovementComponent::ProcessDetectCollisions(float DeltaTime)
 		}
 #endif
 
-		DrawDebugLine(World, Start, End, FLinearColor::Red.ToFColor(true), bPersistent, LifeTime);
+		//DrawDebugLine(World, Start, End, FLinearColor::Red.ToFColor(true), bPersistent, LifeTime);
 	}
 
 	// NOTE: Either use local forward via cross product. // Thinking this might be necessary
@@ -678,12 +691,12 @@ bool UCustomPawnMovementComponent::IsGrounded(FHitResult& Result)
 	ActorsToIgnore.Add(OwnerChar);
 
 	bool bHit = UKismetSystemLibrary::SphereTraceSingle(GetOuter(), StartTwo, EndTwo, SphereCastRadius, ETraceTypeQuery::TraceTypeQuery2, true,
-		ActorsToIgnore, EDrawDebugTrace::ForOneFrame, Result, true);
+		ActorsToIgnore, EDrawDebugTrace::None, Result, true);
 
 	if (!bHit)
 	{
 		bHit = UKismetSystemLibrary::SphereTraceSingle(GetOuter(), Start, End, SphereCastRadius, ETraceTypeQuery::TraceTypeQuery2, true,
-			ActorsToIgnore, EDrawDebugTrace::ForOneFrame, Result, true);
+			ActorsToIgnore, EDrawDebugTrace::None, Result, true);
 	}
 
 	bool bPersistent = true;

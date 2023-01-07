@@ -16,6 +16,7 @@
 #include "SnowboardKids/Animation/SnowboarderAnimInstance.h"
 #include <Animation/AnimMontage.h>
 #include "../Controllers/SnowboardAIController.h"
+#include <DrawDebugHelpers.h>
 
 // Sets default values
 ASnowboardCharacterBase::ASnowboardCharacterBase(const FObjectInitializer& ObjectInitializer) :
@@ -202,6 +203,18 @@ void ASnowboardCharacterBase::Tick(float DeltaTime)
 			GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Vel: X: %.1f, Y: %.1f, Z: %.1f"), Vel.X, Vel.Y, Vel.Z));
 		}
 #endif
+
+		const float CurrentSpeed = CharacterMovementComponent->GetCurrentSpeed();
+		//+ FVector(0.0f, 0.0f, 50.0f)
+		if (!IsAIControlled())
+		{
+			if (GEngine)
+			{
+				GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Red, FString::Printf(TEXT("Speed: %.1f"), CurrentSpeed));
+			}
+		}
+
+		//DrawDebugString(GetWorld(), GetActorLocation(), FString::Printf(TEXT("Speed: %.1f"), CurrentSpeed), this, FColor::White, DeltaTime);
 	}
 }
 
@@ -209,29 +222,6 @@ void ASnowboardCharacterBase::Tick(float DeltaTime)
 void ASnowboardCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
-
-	//PlayerInputComponent->BindAction("North", IE_Pressed, this, &ASnowboardCharacterBase::OnNorthPressed);
-	//PlayerInputComponent->BindAction("North", IE_Released, this, &ASnowboardCharacterBase::OnNorthReleased);
-
-	//PlayerInputComponent->BindAction("East", IE_Pressed, this, &ASnowboardCharacterBase::OnEastPressed);
-	//PlayerInputComponent->BindAction("East", IE_Released, this, &ASnowboardCharacterBase::OnEastReleased);
-
-	//PlayerInputComponent->BindAction("South", IE_Pressed, this, &ASnowboardCharacterBase::OnSouthPressed);
-	//PlayerInputComponent->BindAction("South", IE_Released, this, &ASnowboardCharacterBase::OnSouthReleased);
-
-	//PlayerInputComponent->BindAction("West", IE_Pressed, this, &ASnowboardCharacterBase::OnWestPressed);
-	//PlayerInputComponent->BindAction("West", IE_Released, this, &ASnowboardCharacterBase::OnWestReleased);
-
-	//PlayerInputComponent->BindAxis("MoveForward", this, &ASnowboardCharacterBase::MoveForward);
-	//PlayerInputComponent->BindAxis("MoveRight", this, &ASnowboardCharacterBase::MoveRight);
-
-	// We have 2 versions of the rotation bindings to handle different kinds of devices differently
-	// "turn" handles devices that provide an absolute delta, such as a mouse.
-	// "turnrate" is for devices that we choose to treat as a rate of change, such as an analog joystick
-	//PlayerInputComponent->BindAxis("Turn", this, &ASnowboardCharacterBase::AddControllerYawInput);
-	//PlayerInputComponent->BindAxis("TurnRate", this, &ASnowboardCharacterBase::TurnAtRate);
-	//PlayerInputComponent->BindAxis("LookUp", this, &ASnowboardCharacterBase::AddControllerPitchInput);
-	//PlayerInputComponent->BindAxis("LookUpRate", this, &ASnowboardCharacterBase::LookUpAtRate);
 }
 
 UPawnMovementComponent* ASnowboardCharacterBase::GetMovementComponent() const
@@ -300,29 +290,21 @@ void ASnowboardCharacterBase::MoveInDirection(EAxis::Type Axis, const float Valu
 {
 	if (!Controller)
 	{
-		//bMovingForward = false;
-		//bTurning = false;
 		return;
 	}
 
 	if (Value == 0.0f)
 	{
-		//bMovingForward = false;
-		//bTurning = false;
 		return;
 	}
 
 	if (bMovementDisabled)
 	{
-		//bMovingForward = false;
-		//bTurning = false;
 		return;
 	}
 
 	if (!CharacterMovement)
 	{
-		//bMovingForward = false;
-		//bTurning = false;
 		return;
 	}
 
@@ -337,19 +319,11 @@ void ASnowboardCharacterBase::MoveInDirection(EAxis::Type Axis, const float Valu
 	const float VectorLength = Velocity.Size();
 	
 	const bool bMovementIgnored = CharacterMovement->IsMoveInputIgnored();
-
-	//GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Ignored: %s"), bMovementIgnored ? TEXT("True") : TEXT("False")));
-
 	CharacterMovement->AddInputVector(Direction * Value, true);
-	/*FHitResult OutHit;
-	CharacterMovement->SafeMoveUpdatedComponent(CharacterMovement->ConsumeInputVector(), GetCapsuleComponent()->GetComponentQuat(), true, OutHit, ETeleportType::None);*/
-	//SafeMoveUpdatedComponent(ConsumeInputVector(), UpdatedComponent->GetComponentQuat(), true, OutHit);
 }
 
 void ASnowboardCharacterBase::MoveForward(float Value)
 {
-	//MoveInDirection(EAxis::X, Value);
-	//bMovingForward = true;
 }
 
 void ASnowboardCharacterBase::MoveRight(float Value)
@@ -376,9 +350,6 @@ void ASnowboardCharacterBase::MoveRight(float Value)
 
 	FVector InputVec = FVector(0.0f, 1.0f, 0.0f);
 	CharacterMovement->AddInputVector(InputVec * Value, true);
-
-	//MoveInDirection(EAxis::Y, Value);
-	//bTurning = true;
 }
 
 void ASnowboardCharacterBase::TurnAtRate(float Rate)

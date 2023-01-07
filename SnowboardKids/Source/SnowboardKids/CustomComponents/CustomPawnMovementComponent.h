@@ -20,6 +20,10 @@ class SNOWBOARDKIDS_API UCustomPawnMovementComponent : public UPawnMovementCompo
 
 	UCustomPawnMovementComponent();
 
+public:
+
+	FORCEINLINE float GetCurrentSpeed() const { return ForwardSpeed; }
+
 private:
 	bool ProcessCrashed(float DeltaTime, FQuat IncomingQuat);
 	void ProcessJump(float DeltaTime);

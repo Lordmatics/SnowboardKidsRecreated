@@ -55,8 +55,8 @@ void ASnowboardAIController::Tick(float DeltaSeconds)
 
 	// Steer towards current checkpoint
 	const FVector& NodeLocation = CurrentNodeLocation;
-	DrawDebugString(World, NodeLocation + FVector(0.0f, 0.0f, 50.0f), FString::Printf(TEXT("Index: %d"), CurrentCheckpointIndex));
-	DrawDebugSphere(World, NodeLocation, 50.0f, 4, FColor::Green, true, DeltaSeconds);
+	//DrawDebugString(World, NodeLocation + FVector(0.0f, 0.0f, 50.0f), FString::Printf(TEXT("Index: %d"), CurrentCheckpointIndex));
+	//DrawDebugSphere(World, NodeLocation, 50.0f, 4, FColor::Green, true, DeltaSeconds);
 
 	float NormalisedTurnValue = 0.0f;
 	const FVector& CurrentPawnLocation = PossessedPawn->GetActorLocation();
