@@ -17,7 +17,8 @@
 #include <Animation/AnimMontage.h>
 
 // Sets default values
-ASnowboardCharacterBase::ASnowboardCharacterBase() :
+ASnowboardCharacterBase::ASnowboardCharacterBase(const FObjectInitializer& ObjectInitializer) :
+	Super(ObjectInitializer),
 	BaseTurnRate(45.0f),
 	BaseLookUpRate(45.0f),
 	bMovementDisabled(false),
@@ -180,41 +181,10 @@ void ASnowboardCharacterBase::Tick(float DeltaTime)
 		const FQuat& Rotation = GetCapsuleComponent()->GetComponentQuat();
 		CharacterMovementComponent->ProcessMovement(DeltaTime, Rotation);
 
-		//TODO:
-		// Always moving Forward, unless crashed.
-		// Input to control strafing.
-
-		//const FVector& InputVec = CharacterMovement->ConsumeInputVector();
-		//if (!InputVec.IsZero())
-		//{
-
-
-
-		//	Speed += Acceleration * DeltaTime;
-
-
-
-		//	const FQuat& CapsuleQuat = GetCapsuleComponent()->GetComponentQuat();
-		//	FHitResult OutHit;
-		//	CharacterMovementComponent->SafeMoveUpdatedComponent(InputVec, CapsuleQuat, true, OutHit, ETeleportType::None);
-		//}
-		////else if(Speed > 0.0f)
-		////{
-		////	//bMovingForward = false;
-		////	//bTurning = false;
-		////	//static float DecelFactor = 5.0f;
-		////	//Speed -= Acceleration * DecelFactor * DeltaTime;
-
-		////}
-		//Speed = FMath::Clamp(Speed, 0.0f, MaxSpeed);
-
 		if (GEngine)
 		{
-			//GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Input: X: %.1f, Y: %.1f, Z: %.1f"), InputVec.X, InputVec.Y, InputVec.Z));
-
 			GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Ignored: %s"), bMovementIgnored ? TEXT("True") : TEXT("False")));
 			GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Vel: X: %.1f, Y: %.1f, Z: %.1f"), Vel.X, Vel.Y, Vel.Z));
-			//GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Speed %.1f"), Speed));
 		}
 	}
 }
@@ -224,28 +194,28 @@ void ASnowboardCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerI
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 
-	PlayerInputComponent->BindAction("North", IE_Pressed, this, &ASnowboardCharacterBase::OnNorthPressed);
-	PlayerInputComponent->BindAction("North", IE_Released, this, &ASnowboardCharacterBase::OnNorthReleased);
+	//PlayerInputComponent->BindAction("North", IE_Pressed, this, &ASnowboardCharacterBase::OnNorthPressed);
+	//PlayerInputComponent->BindAction("North", IE_Released, this, &ASnowboardCharacterBase::OnNorthReleased);
 
-	PlayerInputComponent->BindAction("East", IE_Pressed, this, &ASnowboardCharacterBase::OnEastPressed);
-	PlayerInputComponent->BindAction("East", IE_Released, this, &ASnowboardCharacterBase::OnEastReleased);
+	//PlayerInputComponent->BindAction("East", IE_Pressed, this, &ASnowboardCharacterBase::OnEastPressed);
+	//PlayerInputComponent->BindAction("East", IE_Released, this, &ASnowboardCharacterBase::OnEastReleased);
 
-	PlayerInputComponent->BindAction("South", IE_Pressed, this, &ASnowboardCharacterBase::OnSouthPressed);
-	PlayerInputComponent->BindAction("South", IE_Released, this, &ASnowboardCharacterBase::OnSouthReleased);
+	//PlayerInputComponent->BindAction("South", IE_Pressed, this, &ASnowboardCharacterBase::OnSouthPressed);
+	//PlayerInputComponent->BindAction("South", IE_Released, this, &ASnowboardCharacterBase::OnSouthReleased);
 
-	PlayerInputComponent->BindAction("West", IE_Pressed, this, &ASnowboardCharacterBase::OnWestPressed);
-	PlayerInputComponent->BindAction("West", IE_Released, this, &ASnowboardCharacterBase::OnWestReleased);
+	//PlayerInputComponent->BindAction("West", IE_Pressed, this, &ASnowboardCharacterBase::OnWestPressed);
+	//PlayerInputComponent->BindAction("West", IE_Released, this, &ASnowboardCharacterBase::OnWestReleased);
 
-	PlayerInputComponent->BindAxis("MoveForward", this, &ASnowboardCharacterBase::MoveForward);
-	PlayerInputComponent->BindAxis("MoveRight", this, &ASnowboardCharacterBase::MoveRight);
+	//PlayerInputComponent->BindAxis("MoveForward", this, &ASnowboardCharacterBase::MoveForward);
+	//PlayerInputComponent->BindAxis("MoveRight", this, &ASnowboardCharacterBase::MoveRight);
 
 	// We have 2 versions of the rotation bindings to handle different kinds of devices differently
 	// "turn" handles devices that provide an absolute delta, such as a mouse.
 	// "turnrate" is for devices that we choose to treat as a rate of change, such as an analog joystick
-	PlayerInputComponent->BindAxis("Turn", this, &ASnowboardCharacterBase::AddControllerYawInput);
-	PlayerInputComponent->BindAxis("TurnRate", this, &ASnowboardCharacterBase::TurnAtRate);
-	PlayerInputComponent->BindAxis("LookUp", this, &ASnowboardCharacterBase::AddControllerPitchInput);
-	PlayerInputComponent->BindAxis("LookUpRate", this, &ASnowboardCharacterBase::LookUpAtRate);
+	//PlayerInputComponent->BindAxis("Turn", this, &ASnowboardCharacterBase::AddControllerYawInput);
+	//PlayerInputComponent->BindAxis("TurnRate", this, &ASnowboardCharacterBase::TurnAtRate);
+	//PlayerInputComponent->BindAxis("LookUp", this, &ASnowboardCharacterBase::AddControllerPitchInput);
+	//PlayerInputComponent->BindAxis("LookUpRate", this, &ASnowboardCharacterBase::LookUpAtRate);
 }
 
 UPawnMovementComponent* ASnowboardCharacterBase::GetMovementComponent() const
@@ -397,11 +367,6 @@ void ASnowboardCharacterBase::MoveRight(float Value)
 
 void ASnowboardCharacterBase::TurnAtRate(float Rate)
 {
-	if (bRotationDisabled)
-	{
-		return;
-	}
-
 	UWorld* World = GetWorld();
 	if (!World)
 	{
@@ -415,11 +380,6 @@ void ASnowboardCharacterBase::TurnAtRate(float Rate)
 
 void ASnowboardCharacterBase::LookUpAtRate(float Rate)
 {
-	if (bRotationDisabled)
-	{
-		return;
-	}
-
 	UWorld* World = GetWorld();
 	if (!World)
 	{
@@ -432,23 +392,12 @@ void ASnowboardCharacterBase::LookUpAtRate(float Rate)
 	AddControllerPitchInput(PitchInput);
 }
 
-void ASnowboardCharacterBase::AddControllerYawInput(float Value)
+bool ASnowboardCharacterBase::ConsumeItemOffensive()
 {
-	if (bRotationDisabled)
-	{
-		return;
-	}
-
-	APawn::AddControllerYawInput(Value);
+	return false;
 }
 
-void ASnowboardCharacterBase::AddControllerPitchInput(float Value)
+bool ASnowboardCharacterBase::ConsumeItemUtility()
 {
-	if (bRotationDisabled)
-	{
-		return;
-	}
-
-	Value *= -1.0f;
-	APawn::AddControllerPitchInput(Value);
+	return false;
 }

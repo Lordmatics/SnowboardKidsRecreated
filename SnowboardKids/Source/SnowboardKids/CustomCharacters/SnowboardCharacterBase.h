@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Pawn.h"
+#include "SnowboardKids/Interfaces/CharacterInterface.h"
 #include "SnowboardCharacterBase.generated.h"
 
 class USpringArmComponent;
@@ -31,13 +32,13 @@ namespace SocketNames
 }
 
 UCLASS()
-class SNOWBOARDKIDS_API ASnowboardCharacterBase : public APawn
+class SNOWBOARDKIDS_API ASnowboardCharacterBase : public APawn, public ICharacterInterface
 {
 	GENERATED_BODY()
 
 public:
 	// Sets default values for this pawn's properties
-	ASnowboardCharacterBase();
+	ASnowboardCharacterBase(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 
 	FORCEINLINE UCapsuleComponent* GetCapsuleComponent() const { return CapsuleComponent; }
 	FORCEINLINE UCameraComponent* GetCamera() const { return ThirdPersonCamera; }
@@ -52,6 +53,31 @@ public:
 	virtual void OnLanded(const FHitResult& Hit);
 
 	void PlayAnimation(UAnimMontage* Montage);
+
+	// Inputs
+
+	void OnNorthPressed();
+	void OnNorthReleased();
+	void OnEastPressed();
+	void OnEastReleased();
+	void OnSouthPressed();
+	void OnSouthReleased();
+	void OnWestPressed();
+	void OnWestReleased();
+	void MoveInDirection(EAxis::Type Axis, const float Value);
+	void MoveForward(float Value);
+	void MoveRight(float Value);
+	void TurnAtRate(float Rate);
+	void LookUpAtRate(float Rate);
+	//virtual void AddControllerYawInput(float Value) override;
+	//virtual void AddControllerPitchInput(float Value) override;
+	// End Inputs
+
+	// Interface Functions
+	virtual bool ConsumeItemOffensive() override;
+	virtual bool ConsumeItemUtility() override;
+	// End Interface
+
 private:
 	virtual void BeginPlay() override;	
 	virtual void Tick(float DeltaTime) override;
@@ -59,38 +85,6 @@ private:
 	virtual UPawnMovementComponent* GetMovementComponent() const override;
 	virtual void PossessedBy(AController* NewController) override;
 	virtual void UnPossessed() override;
-	
-	UFUNCTION()
-	void OnNorthPressed();
-
-	UFUNCTION()
-	void OnNorthReleased();
-
-	UFUNCTION()
-	void OnEastPressed();
-
-	UFUNCTION()
-	void OnEastReleased();
-
-	UFUNCTION()
-	void OnSouthPressed();
-
-	UFUNCTION()
-	void OnSouthReleased();
-
-	UFUNCTION()
-	void OnWestPressed();
-
-	UFUNCTION()
-	void OnWestReleased();
-
-	void MoveInDirection(EAxis::Type Axis, const float Value);
-	void MoveForward(float Value);
-	void MoveRight(float Value);
-	void TurnAtRate(float Rate);
-	void LookUpAtRate(float Rate);
-	virtual void AddControllerYawInput(float Value) override;
-	virtual void AddControllerPitchInput(float Value) override;
 
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Character", meta = (AllowPrivateAccess = "true"))
