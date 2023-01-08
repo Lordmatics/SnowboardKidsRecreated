@@ -25,7 +25,8 @@ ASnowboardCharacterBase::ASnowboardCharacterBase(const FObjectInitializer& Objec
 	BaseLookUpRate(45.0f),
 	bMovementDisabled(false),
 	bRotationDisabled(false),
-	bIsAIControlled(false)
+	bIsAIControlled(false),
+	BoardMeshes()
 {
  	// Set this pawn to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;	
@@ -94,6 +95,11 @@ USnowboarderAnimInstance* ASnowboardCharacterBase::GetAnimInstance() const
 		
 	USnowboarderAnimInstance* AnimInstance = Cast<USnowboarderAnimInstance>(SkeletalMesh->GetAnimInstance());
 	return AnimInstance;
+}
+
+UStaticMesh* ASnowboardCharacterBase::GetBoardFromType(EBoardType BoardType) const
+{
+	return BoardMeshes.GetMeshFromType(BoardType);
 }
 
 void ASnowboardCharacterBase::OnLanded(const FHitResult& Hit)

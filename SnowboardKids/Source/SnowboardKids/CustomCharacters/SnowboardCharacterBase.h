@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Pawn.h"
 #include "SnowboardKids/Interfaces/CharacterInterface.h"
+#include "../Data/BoardData.h"
 #include "SnowboardCharacterBase.generated.h"
 
 class USpringArmComponent;
@@ -50,6 +51,8 @@ public:
 	FORCEINLINE USkeletalMeshComponent* GetSkeletalMesh() const { return SkeletalMesh; }
 	FORCEINLINE UCustomPawnMovementComponent* GetCharacterMovement() const { return CharacterMovement; }
 	USnowboarderAnimInstance* GetAnimInstance() const;
+
+	UStaticMesh* GetBoardFromType(EBoardType BoardType) const;
 
 	// Called from Character Movement.
 	virtual void OnLanded(const FHitResult& Hit);
@@ -129,4 +132,7 @@ private:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Character", meta = (AllowPrivateAccess = "true"))
 		bool bIsAIControlled;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character", meta = (AllowPrivateAccess = "true"))
+		FBoardMeshes BoardMeshes;
 };

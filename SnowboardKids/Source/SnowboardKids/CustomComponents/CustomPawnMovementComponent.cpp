@@ -23,12 +23,7 @@
 
 UCustomPawnMovementComponent::UCustomPawnMovementComponent()
 {	
-	ForwardSpeed = 1000.0f;
 	CrashSpeed = 200.0f;
-	HorizontalSpeed = 200.5f;
-	Acceleration = 100.0f;
-	MaxSpeed = 1600.0f;
-	MaxSpeedWhenCharged = 2000.0f;
 	bMovingForward = false;
 	bTurning = false;
 	bJumping = false;
@@ -54,8 +49,6 @@ UCustomPawnMovementComponent::UCustomPawnMovementComponent()
 	ChargeTimer = 0.0f;
 	ChargeApexTime = 2.5f;
 
-	GravityScale = 300.9f;
-	JumpScale = 600.0f;
 	JumpForwardScale = 200.0f;
 
 	LeftBoardRot = 5.0f;
@@ -74,13 +67,41 @@ UCustomPawnMovementComponent::UCustomPawnMovementComponent()
 	CheckGroundRayLength = 42.5f;
 	SurfaceNormalRayLength = 100.0f;
 	CheckCollisionRayLength = 70.0f;
+	AdjacentCollisionRayLength = 65.0f;
 
-	DodgeAdjacentCollisionScale = 125.0f;
+	DodgeAdjacentCollisionScale = 250.0f;
 
 	JumpVector = FVector::ZeroVector;
 	CrashRot = FRotator::ZeroRotator;
 	RotationLastFrame = FRotator::ZeroRotator;
-	TurnLimit = 0.5f; // This is literally the Turning Star on the original game, higher = more control.
+
+	TimeBeforeGravity = 1.2f;
+	DelayGravityTimer = 0.0f;
+
+	bIsPlayer = false;
+
+}
+
+void UCustomPawnMovementComponent::BeginPlay()
+{
+	Super::BeginPlay();
+
+	BoardData = FBoardData(BoardType);
+	
+	APawn* Owner = GetPawnOwner();
+	if (const ASnowboardCharacterBase* SnowboardCharacter = Cast<ASnowboardCharacterBase>(Owner))
+	{
+		bIsPlayer = !SnowboardCharacter->IsAIControlled();
+		if (UStaticMeshComponent* Snowboard = SnowboardCharacter->GetSnowboard())
+		{
+			UStaticMesh* BoardMesh = SnowboardCharacter->GetBoardFromType(BoardType);
+			Snowboard->SetStaticMesh(BoardMesh);
+		}
+	}
+	else
+	{
+		bIsPlayer = false;
+	}
 }
 
 bool UCustomPawnMovementComponent::ProcessCrashed(float DeltaTime, FQuat IncomingQuat)
@@ -97,7 +118,7 @@ bool UCustomPawnMovementComponent::ProcessCrashed(float DeltaTime, FQuat Incomin
 		CrashTimer = 0.0f;
 		bCrashed = false;
 		// Nuke speed - ready to start reaccelerating
-		ForwardSpeed = 0.0f;
+		BoardData.ForwardSpeed = BoardData.RecoverySpeed;
 		return true;
 	}
 
@@ -146,12 +167,12 @@ bool UCustomPawnMovementComponent::ProcessCrashed(float DeltaTime, FQuat Incomin
 	if (!OutHit.bBlockingHit)
 	{
 		// Apply some psuedo gravity here.
-		FVector PseudoGravity = FVector::DownVector * GravityScale * DeltaTime;
+		FVector PseudoGravity = FVector::DownVector * BoardData.GravityScale * DeltaTime;
 		SafeMoveUpdatedComponent(PseudoGravity, RecoilRotation, true, OutHit, ETeleportType::None);
 	}
 	else
 	{
-		FVector PseudoKnockback = FVector::UpVector * GravityScale * 0.5f * DeltaTime;
+		FVector PseudoKnockback = FVector::UpVector * BoardData.GravityScale * 0.5f * DeltaTime;
 		SafeMoveUpdatedComponent(PseudoKnockback, RecoilRotation, true, OutHit, ETeleportType::None);
 	}
 	return true;
@@ -189,10 +210,10 @@ void UCustomPawnMovementComponent::ProcessJump(float DeltaTime)
 
 	// Add Vertical movement - and a bit of forward movement.
 	FVector JmpVec(FVector::UpVector);
-	JmpVec *= (JumpScale * ChargedJumpFactor * DeltaTime);
+	JmpVec *= (BoardData.JumpScale * ChargedJumpFactor * DeltaTime);
 
 	// Only add forward movement, if we're not at max speed.
-	if (ForwardSpeed <= MaxSpeed)
+	if (BoardData.ForwardSpeed <= BoardData.MaxSpeed)
 	{
 		FVector ForwardVector(FVector::ForwardVector);
 		ForwardVector *= JumpForwardScale * ChargedJumpFactor * DeltaTime;
@@ -221,14 +242,25 @@ void UCustomPawnMovementComponent::ProcessGravity(float DeltaTime)
 	{
 		// Apply downward movement.
 		bFalling = true;
-		FVector GravityVec(FVector::DownVector);
-		GravityVec *= GravityScale * DeltaTime;
 
-		bMatchRotToImpactNormal = false;
-		//SetPlaneConstraintEnabled(false);
-		//ImpactNormal = FVector::UpVector;
-		SetGravityVector(GravityVec);	
-		ConstrainToPlaneNormal(false); // NOTE: This may or may not be correct
+		DelayGravityTimer += DeltaTime;
+		//if (DelayGravityTimer < TimeBeforeGravity)
+		//{
+		//
+		//}
+		//else
+		{
+			FVector GravityVec(FVector::DownVector);
+			GravityVec *= BoardData.GravityScale * DeltaTime;
+
+			bMatchRotToImpactNormal = false;
+			//SetPlaneConstraintEnabled(false);
+			//ImpactNormal = FVector::UpVector;
+			SetGravityVector(GravityVec);
+			ConstrainToPlaneNormal(false); // NOTE: This may or may not be correct
+
+		}
+
 		// NOTE: Be much better to recalibrate our characters Roll (forward/backward tilt) mid air, so we land with the board flat
 
 	}
@@ -284,12 +316,12 @@ void UCustomPawnMovementComponent::ProcessAcceleration(float DeltaTime)
 #if defined DEBUG_SNOWBOARD_KIDS
 	if (GEngine)
 	{
-		GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Speed: %.1f, Max: %.1f"), ForwardSpeed, MaxSpeed));
+		GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Speed: %.1f, Max: %.1f"), BoardData.ForwardSpeed, BoardData.MaxSpeed));
 	}
 #endif
 
-	ForwardSpeed += Acceleration * DeltaTime;
-	ForwardSpeed = FMath::Clamp(ForwardSpeed, 0.0f, MaxSpeed);
+	BoardData.ForwardSpeed += BoardData.Acceleration * DeltaTime;
+	BoardData.ForwardSpeed = FMath::Clamp(BoardData.ForwardSpeed, 0.0f, BoardData.MaxSpeed);
 }
 
 void UCustomPawnMovementComponent::ProcessCharging(float DeltaTime)
@@ -339,20 +371,36 @@ void UCustomPawnMovementComponent::ProcessForwardMovement(float DeltaTime, FQuat
 	InputVector.Y = FMath::Clamp(InputVector.Y, -1.0f, 1.0f);
 	float YValue = InputVector.Y;
 
-	// Continually move forward.
-	FVector DeltaVec = OwnerForward * ForwardSpeed * DeltaTime;
-	if (!bCharging && !bCharged && !bJumping && !bFalling && !bCrashed)
+	// Continually move forward.	
+	if (YValue != 0.0f && bIsPlayer)
 	{
-		if (ForwardSpeed >= MaxSpeed * 0.33f)
+		// Turning, decelerate a smidge.
+		if (BoardData.ForwardSpeed >= BoardData.MinTurnSpeed)
 		{
-#if defined DEBUG_SNOWBOARD_KIDS
-			GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Input (X): %.1f"), InputVector.X));
-			GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Input (Y): %.1f"), InputVector.Y));
-			GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Input (Z): %.1f"), InputVector.Z));
-#endif
-			FVector TurnVec = InputVector * HorizontalSpeed * DeltaTime;
+			float DecelerationScale = 1.0f;
+			const float Threshold = BoardData.MaxSpeed * 0.85f;
+			if (BoardData.ForwardSpeed >= Threshold)
+			{
+				DecelerationScale = 1.25f;
+			}
+			BoardData.ForwardSpeed -= BoardData.Acceleration * DecelerationScale * DeltaTime;
+			BoardData.ForwardSpeed = FMath::Clamp(BoardData.ForwardSpeed, BoardData.MinTurnSpeed, BoardData.MaxSpeed);
+		}		
+	}
+
+	FVector DeltaVec = OwnerForward * BoardData.ForwardSpeed * DeltaTime;
+	if (bIsPlayer && !bCharging && !bCharged && !bJumping && !bFalling && !bCrashed)
+	{
+		if (BoardData.ForwardSpeed >= BoardData.MaxSpeed * 0.66f)
+		{
+			FVector TurnVec = InputVector * BoardData.HorizontalSpeed * DeltaTime;
 			DeltaVec += TurnVec;
-		}	
+		}
+		else
+		{
+			FVector TurnVec = InputVector * BoardData.HorizontalSpeed * 0.2f * DeltaTime;
+			DeltaVec += TurnVec;
+		}
 	}
 
 	if (bFalling)
@@ -388,12 +436,12 @@ void UCustomPawnMovementComponent::ProcessForwardMovement(float DeltaTime, FQuat
 	
 	if (AnimInstance)
 	{
-		AnimInstance->SetSpeed(ForwardSpeed);				
+		AnimInstance->SetSpeed(BoardData.ForwardSpeed);				
 		AnimInstance->SetTilt(YValue);	
 #if defined DEBUG_SNOWBOARD_KIDS
 		if (GEngine)
 		{
-			GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("ForwardSpeed: %.1f"), ForwardSpeed));
+			GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("BoardData.ForwardSpeed: %.1f"), BoardData.ForwardSpeed));
 			GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("YValue: %.1f"), YValue));
 		}
 #endif
@@ -461,7 +509,14 @@ void UCustomPawnMovementComponent::ProcessForwardMovement(float DeltaTime, FQuat
 }
 
 void UCustomPawnMovementComponent::ProcessAdjacentObstacles(float DeltaTime)
-{
+{	
+	//return;
+	
+	if (bFalling || bJumping || bCrashed || bCharging)
+	{
+		return;
+	}
+
 	bool bCollisionRight = false;
 	bool bCollisionLeft = false;
 	APawn* Owner = GetPawnOwner();
@@ -478,14 +533,16 @@ void UCustomPawnMovementComponent::ProcessAdjacentObstacles(float DeltaTime)
 
 	FHitResult RightHitResult;
 	TArray<AActor*> ActorsToIgnore;
-	const FVector& Start = Owner->GetActorLocation();
+	const FVector& OwnerLocation = Owner->GetActorLocation();
+	const FVector& StartLeft = OwnerLocation + FVector(0.0f, 5.0f, 45.5f);
+	const FVector& StartRight = OwnerLocation + FVector(0.0f, -5.0f, 45.5f);
 	const FVector& ForwardVector = Owner->GetActorForwardVector();
 	const FVector& RightVector = Owner->GetActorRightVector();
-	const FVector EndLeft = Start - (RightVector * CheckCollisionRayLength);
-	const FVector EndRight = Start + (RightVector * CheckCollisionRayLength);
+	const FVector EndLeft = StartLeft - (RightVector * AdjacentCollisionRayLength);
+	const FVector EndRight = StartRight + (RightVector * AdjacentCollisionRayLength);
 	AActor* OwnerChar = Cast<AActor>(Owner);
 	ActorsToIgnore.Add(OwnerChar);
-	const bool bHitRight = UKismetSystemLibrary::SphereTraceSingle(GetOuter(), Start, EndRight, SphereCastRadius, ETraceTypeQuery::TraceTypeQuery2, true,
+	const bool bHitRight = UKismetSystemLibrary::SphereTraceSingle(GetOuter(), StartRight, EndRight, SphereCastRadius, ETraceTypeQuery::TraceTypeQuery2, true,
 		ActorsToIgnore, EDrawDebugTrace::None, RightHitResult, true);
 
 	bool bPersistent = false;
@@ -498,7 +555,7 @@ void UCustomPawnMovementComponent::ProcessAdjacentObstacles(float DeltaTime)
 	FVector HitRightPosition = RightHitResult.ImpactPoint;
 
 	FHitResult LeftHitResult;
-	const bool bHitLeft = UKismetSystemLibrary::SphereTraceSingle(GetOuter(), Start, EndLeft, SphereCastRadius, ETraceTypeQuery::TraceTypeQuery2, true,
+	const bool bHitLeft = UKismetSystemLibrary::SphereTraceSingle(GetOuter(), StartLeft, EndLeft, SphereCastRadius, ETraceTypeQuery::TraceTypeQuery2, true,
 		ActorsToIgnore, EDrawDebugTrace::None, LeftHitResult, true);
 
 	if (bHitLeft && LeftHitResult.bBlockingHit)
@@ -510,8 +567,8 @@ void UCustomPawnMovementComponent::ProcessAdjacentObstacles(float DeltaTime)
 	if (bCollisionLeft && bCollisionRight)
 	{
 		// Strafe in the direction that is further away.
-		FVector DirToLeft = HitLeftPosition - Start;
-		FVector DirToRight = HitRightPosition - Start;
+		FVector DirToLeft = HitLeftPosition - StartLeft;
+		FVector DirToRight = HitRightPosition - StartRight;
 		const float LeftDistSqr = DirToLeft.SizeSquared();
 		const float RightDistSqr = DirToRight.SizeSquared();
 		if (LeftDistSqr >= RightDistSqr)
@@ -526,14 +583,17 @@ void UCustomPawnMovementComponent::ProcessAdjacentObstacles(float DeltaTime)
 		}
 	}
 
+	
 	FVector TranslationZDelta = FVector::ZeroVector;
 	if (bCollisionRight)
-	{		
-		TranslationZDelta = FVector::LeftVector * DodgeAdjacentCollisionScale * DeltaTime;
+	{
+		FVector RightImpactNormal = RightHitResult.ImpactNormal;
+		TranslationZDelta = RightImpactNormal * DodgeAdjacentCollisionScale * DeltaTime;
 	}
 	else if (bCollisionLeft)
 	{
-		TranslationZDelta = FVector::RightVector * DodgeAdjacentCollisionScale * DeltaTime;
+		FVector LeftImpactNormal = LeftHitResult.ImpactNormal;
+		TranslationZDelta = LeftImpactNormal * DodgeAdjacentCollisionScale * DeltaTime;
 	}
 
 	if (!TranslationZDelta.IsZero())
@@ -561,10 +621,15 @@ void UCustomPawnMovementComponent::ProcessDetectCollisions(float DeltaTime)
 
 	FHitResult HitResult;
 	TArray<AActor*> ActorsToIgnore;
-	const FVector& Start = Owner->GetActorLocation();
+	const FVector& OwnerLocation = Owner->GetActorLocation();
+	const FVector& Start = OwnerLocation;
+	const FVector& StartRight = OwnerLocation + FVector(0.0f, -15.0f, 0.0f);
+	const FVector& StartLeft = OwnerLocation + FVector(0.0f, 15.0f, 0.0f);
 	const FVector& ForwardVector = Owner->GetActorForwardVector();
 	const FVector& RightVector = Owner->GetActorRightVector();
 	const FVector End = Start + (ForwardVector * CheckCollisionRayLength);
+	const FVector EndRight = StartRight + (ForwardVector * CheckCollisionRayLength);
+	const FVector EndLeft = StartLeft + (ForwardVector * CheckCollisionRayLength);
 	AActor* OwnerChar = Cast<AActor>(Owner);
 	ActorsToIgnore.Add(OwnerChar);
 	const bool bHit = UKismetSystemLibrary::SphereTraceSingle(GetOuter(), Start, End, SphereCastRadius, ETraceTypeQuery::TraceTypeQuery2, true,
@@ -668,7 +733,10 @@ void UCustomPawnMovementComponent::ProcessMovement(float DeltaTime, FQuat Incomi
 	ProcessCharging(DeltaTime);
 	ProcessForwardMovement(DeltaTime, IncomingQuat);
 
+	// Maybe make this AI only + Players with Accessibility option.
+	// Makes it harder to crash into walls.
 	ProcessAdjacentObstacles(DeltaTime);
+
 	ProcessDetectCollisions(DeltaTime);
 }
 
@@ -876,6 +944,7 @@ void UCustomPawnMovementComponent::OnLanded()
 	}
 	ConstrainToPlaneNormal(true);
 	bFalling = false;
+	DelayGravityTimer = 0.0f;
 }
 
 bool UCustomPawnMovementComponent::ValidateOwnerComponents()
@@ -999,7 +1068,7 @@ FRotator UCustomPawnMovementComponent::OrientRotationToFloor(FQuat IncomingQuat,
 
 	const float DeltaTime = World->GetDeltaSeconds();
 	// If there is input to strafe.
-	float RootYaw = FMath::Clamp(YValue, -TurnLimit, TurnLimit);
+	float RootYaw = FMath::Clamp(YValue, -BoardData.TurnLimit, BoardData.TurnLimit);
 	if (YValue != 0.0f)
 	{
 		static bool RotateOnHorizontalInput = true;
@@ -1008,7 +1077,7 @@ FRotator UCustomPawnMovementComponent::OrientRotationToFloor(FQuat IncomingQuat,
 			// Rotate The Character
 			FRotator NewRotation;
 			NewRotation.Add(0.0f, RootYaw, 0.0f); // Z Will do slashes spin rotation lol.
-			if (bFalling)
+			if (!bIsPlayer)
 			{
 				RootComp->AddRelativeRotation(NewRotation);
 			}

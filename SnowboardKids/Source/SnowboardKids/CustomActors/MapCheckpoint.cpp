@@ -96,14 +96,14 @@ void AMapCheckpoint::OnTriggerOverlap(UPrimitiveComponent* OverlappedComponent, 
 
 	AIController->SetOverlapped(true);
 
-	UE_LOG(LogTemp, Log, TEXT("Overlap Start"));
+	//UE_LOG(LogTemp, Log, TEXT("Overlap Start"));
 	AIController->OnCheckpointReached();
 	// Tell AI to Update their heading to the next checkpoint.
 }
 
 void AMapCheckpoint::OnTriggerOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
-	UE_LOG(LogTemp, Log, TEXT("Overlap End"));
+	//UE_LOG(LogTemp, Log, TEXT("Overlap End"));
 	if (!OtherActor)
 	{
 		return;

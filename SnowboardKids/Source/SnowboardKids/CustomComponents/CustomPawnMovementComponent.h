@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/PawnMovementComponent.h"
+#include "../Data/BoardData.h"
 #include "CustomPawnMovementComponent.generated.h"
 
 class UCameraComponent;
@@ -22,7 +23,11 @@ class SNOWBOARDKIDS_API UCustomPawnMovementComponent : public UPawnMovementCompo
 
 public:
 
-	FORCEINLINE float GetCurrentSpeed() const { return ForwardSpeed; }
+	FORCEINLINE float GetCurrentSpeed() const { return BoardData.ForwardSpeed; }
+
+protected:
+
+	virtual void BeginPlay() override;
 
 private:
 	bool ProcessCrashed(float DeltaTime, FQuat IncomingQuat);
@@ -57,8 +62,8 @@ public:
 	/*
 	* At what rate should we move forward.
 	*/
-	UPROPERTY(EditAnywhere, Category = "Movement")
-	float ForwardSpeed;
+	//UPROPERTY(EditAnywhere, Category = "Movement")
+	//float ForwardSpeed;
 	
 	/*
 	* How fast should we recoil
@@ -69,17 +74,17 @@ public:
 	/*
 	* Essentially how many units should we move sideways when rotating.
 	*/
-	UPROPERTY(EditAnywhere, Category = "Movement")
-	float HorizontalSpeed;
+	//UPROPERTY(EditAnywhere, Category = "Movement")
+	//float HorizontalSpeed;
 
 	/*
 	* At what rate should we build speed up to our max.
 	*/
-	UPROPERTY(EditAnywhere, Category = "Movement")
-	float Acceleration;
+	//UPROPERTY(EditAnywhere, Category = "Movement")
+	//float Acceleration;
 
-	UPROPERTY(EditAnywhere, Category = "Movement")
-	float MaxSpeed;
+	//UPROPERTY(EditAnywhere, Category = "Movement")
+	//float MaxSpeed;
 	UPROPERTY(EditAnywhere, Category = "Movement")
 	float MaxSpeedWhenCharged;
 
@@ -92,10 +97,10 @@ public:
 	bool bCharged;
 	bool bSouthInputIgnored;
 
-	UPROPERTY(EditAnywhere, Category = "Movement")
-	float GravityScale;
-	UPROPERTY(EditAnywhere, Category = "Movement")
-	float JumpScale;
+	//UPROPERTY(EditAnywhere, Category = "Movement")
+	//float GravityScale;
+	//UPROPERTY(EditAnywhere, Category = "Movement")
+	//float JumpScale;
 	UPROPERTY(EditAnywhere, Category = "Movement")
 	float JumpForwardScale;
 
@@ -110,6 +115,9 @@ public:
 
 	UPROPERTY(EditAnywhere, Category = "Movement")
 	float CheckCollisionRayLength;
+
+	UPROPERTY(EditAnywhere, Category = "Movement")
+	float AdjacentCollisionRayLength;
 
 	UPROPERTY(EditAnywhere, Category = "Movement")
 	float JumpApexTime;
@@ -130,7 +138,7 @@ public:
 	float RightBoardRot;
 
 	UPROPERTY(EditAnywhere, Category = "Movement")
-		float InterpSpeedOrientToFloor;
+	float InterpSpeedOrientToFloor;
 
 	UPROPERTY(EditAnywhere, Category = "Movement")	
 	float BankXRotLimit;
@@ -160,12 +168,12 @@ public:
 	float CrashTimer;
 
 	UPROPERTY(EditAnywhere, Category = "Movement")
-		UAnimMontage* CrashMontage;
+	UAnimMontage* CrashMontage;
 
 	bool bAdjustedHack = false;
 
-	UPROPERTY(EditAnywhere, Category = "Movement", meta = (ClampMin = 0.0, ClampMax = 1.0))
-	float TurnLimit;
+	//UPROPERTY(EditAnywhere, Category = "Movement", meta = (ClampMin = 0.0, ClampMax = 1.0))
+	//float TurnLimit;
 
 	UPROPERTY(Transient)
 	UCameraComponent* Camera;
@@ -200,4 +208,13 @@ public:
 	FVector JumpVector;
 	FRotator RotationLastFrame;
 	FRotator CrashRot;
+
+	float TimeBeforeGravity;
+	float DelayGravityTimer;
+
+	UPROPERTY(EditAnywhere, Category = "Movement")
+	EBoardType BoardType;
+
+	FBoardData BoardData;
+	bool bIsPlayer;
 };
