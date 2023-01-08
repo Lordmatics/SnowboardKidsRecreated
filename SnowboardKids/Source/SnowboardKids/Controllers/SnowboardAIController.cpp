@@ -11,7 +11,8 @@
 ASnowboardAIController::ASnowboardAIController() :
 	Super(),
 	PossessedPawn(nullptr),
-	CurrentCheckpointIndex(-1)
+	CurrentCheckpointIndex(-1),
+	bIsOverlapped(false)
 {
 
 }

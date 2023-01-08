@@ -75,6 +75,8 @@ UCustomPawnMovementComponent::UCustomPawnMovementComponent()
 	SurfaceNormalRayLength = 100.0f;
 	CheckCollisionRayLength = 70.0f;
 
+	DodgeAdjacentCollisionScale = 100.0f;
+
 	JumpVector = FVector::ZeroVector;
 	CrashRot = FRotator::ZeroRotator;
 	RotationLastFrame = FRotator::ZeroRotator;
@@ -458,6 +460,89 @@ void UCustomPawnMovementComponent::ProcessForwardMovement(float DeltaTime, FQuat
 	//}
 }
 
+void UCustomPawnMovementComponent::ProcessAdjacentObstacles(float DeltaTime)
+{
+	bool bCollisionRight = false;
+	bool bCollisionLeft = false;
+	APawn* Owner = GetPawnOwner();
+	if (!Owner)
+	{
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	FHitResult RightHitResult;
+	TArray<AActor*> ActorsToIgnore;
+	const FVector& Start = Owner->GetActorLocation();
+	const FVector& ForwardVector = Owner->GetActorForwardVector();
+	const FVector& RightVector = Owner->GetActorRightVector();
+	const FVector EndLeft = Start - (RightVector * CheckCollisionRayLength);
+	const FVector EndRight = Start + (RightVector * CheckCollisionRayLength);
+	AActor* OwnerChar = Cast<AActor>(Owner);
+	ActorsToIgnore.Add(OwnerChar);
+	const bool bHitRight = UKismetSystemLibrary::SphereTraceSingle(GetOuter(), Start, EndRight, SphereCastRadius, ETraceTypeQuery::TraceTypeQuery2, true,
+		ActorsToIgnore, EDrawDebugTrace::None, RightHitResult, true);
+
+	bool bPersistent = false;
+	float LifeTime = 1.0f;
+
+	if (bHitRight && RightHitResult.bBlockingHit)
+	{
+		bCollisionRight = true;
+	}
+	FVector HitRightPosition = RightHitResult.ImpactPoint;
+
+	FHitResult LeftHitResult;
+	const bool bHitLeft = UKismetSystemLibrary::SphereTraceSingle(GetOuter(), Start, EndLeft, SphereCastRadius, ETraceTypeQuery::TraceTypeQuery2, true,
+		ActorsToIgnore, EDrawDebugTrace::None, LeftHitResult, true);
+
+	if (bHitLeft && LeftHitResult.bBlockingHit)
+	{
+		bCollisionLeft = true;
+	}
+
+	FVector HitLeftPosition = LeftHitResult.ImpactPoint;
+	if (bCollisionLeft && bCollisionRight)
+	{
+		// Strafe in the direction that is further away.
+		FVector DirToLeft = HitLeftPosition - Start;
+		FVector DirToRight = HitRightPosition - Start;
+		const float LeftDistSqr = DirToLeft.SizeSquared();
+		const float RightDistSqr = DirToRight.SizeSquared();
+		if (LeftDistSqr >= RightDistSqr)
+		{
+			// Right is closer - strafe left.
+			bCollisionRight = false;
+		}
+		else
+		{
+			// Left is closer - strafe right.
+			bCollisionLeft = false;
+		}
+	}
+
+	FVector TranslationZDelta = FVector::ZeroVector;
+	if (bCollisionRight)
+	{		
+		TranslationZDelta = FVector::LeftVector * DodgeAdjacentCollisionScale * DeltaTime;
+	}
+	else if (bCollisionLeft)
+	{
+		TranslationZDelta = FVector::RightVector * DodgeAdjacentCollisionScale * DeltaTime;
+	}
+
+	if (!TranslationZDelta.IsZero())
+	{
+		FHitResult OutHit;
+		SafeMoveUpdatedComponent(TranslationZDelta, RotationLastFrame, false, OutHit, ETeleportType::None);
+	}
+}
+
 void UCustomPawnMovementComponent::ProcessDetectCollisions(float DeltaTime)
 {
 	bool bCollisionAhead = false;
@@ -496,12 +581,6 @@ void UCustomPawnMovementComponent::ProcessDetectCollisions(float DeltaTime)
 			GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Hit: %s"), *HitResult.GetActor()->GetName()));
 		}
 #endif
-
-		// Red up to the blocking hit, green thereafter
-		//DrawDebugLine(World, Start, HitResult.ImpactPoint, FLinearColor::Red.ToFColor(true), bPersistent, LifeTime);
-		//DrawDebugLine(World, HitResult.ImpactPoint, End, FLinearColor::Green.ToFColor(true), bPersistent, LifeTime);
-		//DrawDebugPoint(World, HitResult.ImpactPoint, 16.0f, FLinearColor::Red.ToFColor(true), bPersistent, LifeTime);
-
 		bCollisionAhead = true;
 	}
 	else
@@ -512,8 +591,6 @@ void UCustomPawnMovementComponent::ProcessDetectCollisions(float DeltaTime)
 			GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("NoHit")));
 		}
 #endif
-
-		//DrawDebugLine(World, Start, End, FLinearColor::Red.ToFColor(true), bPersistent, LifeTime);
 	}
 
 	// NOTE: Either use local forward via cross product. // Thinking this might be necessary
@@ -526,23 +603,8 @@ void UCustomPawnMovementComponent::ProcessDetectCollisions(float DeltaTime)
 
 	if (bCollisionAhead)
 	{
-
-		// Okay okay okay
-		// So...
-		// Driving into a wall == bad = force collision
-		// This will be very close to the normal being horizontal, so 1 in the x or y
-
-		// Driving into the floor, should just have the character recalibrate to the new surface
-		// This normal will be much more like 0 0 1
-
-		// Need to distinguish between these 2 cases, to do the approrpriate handling.
-
 		FVector WorldRight = FVector::RightVector;
 		FVector WorldForward = FVector::ForwardVector;
-
-		// If the angle between the normal and the world up vector is idk, < 90, so 3.14 / 4 radians
-		// WE can assume change of surface, else trigger crash.
-
 		// Projection = V1Dot UnitV2 * UnitV2, how much of V1 is on V2
 		const float AngleBetweenNormalAndUpRads = FVector::DotProduct(CollisionImpactNormal, FVector::UpVector);
 		const float AngleInDegrees = FMath::RadiansToDegrees(AngleBetweenNormalAndUpRads);
@@ -564,7 +626,6 @@ void UCustomPawnMovementComponent::ProcessDetectCollisions(float DeltaTime)
 			float TranslationZ = UKismetMathLibrary::SafeDivide(FMath::Abs((Start - HitResult.ImpactPoint).Z), 2.5f);
 			FVector TranslationZDelta = FVector(TranslationX, 0.0f, TranslationZ);
 			SafeMoveUpdatedComponent(TranslationZDelta, AdjustedRot, false, OutHit, ETeleportType::None);
-			//bAdjustedHack = true;
 		}
 		else
 		{
@@ -598,6 +659,7 @@ void UCustomPawnMovementComponent::ProcessMovement(float DeltaTime, FQuat Incomi
 	ProcessCharging(DeltaTime);
 	ProcessForwardMovement(DeltaTime, IncomingQuat);
 
+	ProcessAdjacentObstacles(DeltaTime);
 	ProcessDetectCollisions(DeltaTime);
 }
 

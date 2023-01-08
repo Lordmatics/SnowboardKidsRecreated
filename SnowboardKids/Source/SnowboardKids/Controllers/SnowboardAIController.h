@@ -24,6 +24,8 @@ public:
 
 	void OnCheckpointReached();
 
+	FORCEINLINE bool IsOverlapped() const { return bIsOverlapped; }
+	FORCEINLINE void SetOverlapped(bool Value) { bIsOverlapped = Value; }
 protected:
 
 	virtual void BeginPlay() override;
@@ -47,5 +49,6 @@ private:
 	AAICheckpointNode* CurrentNode;
 
 	int CurrentCheckpointIndex;
+	bool bIsOverlapped;
 	FVector CurrentNodeLocation;
 };

@@ -70,11 +70,6 @@ void AMapCheckpoint::Tick(float DeltaTime)
 
 void AMapCheckpoint::OnTriggerOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	if (bOverlapped)
-	{
-		return;
-	}
-
 	if (!OtherActor)
 	{
 		return;
@@ -93,7 +88,13 @@ void AMapCheckpoint::OnTriggerOverlap(UPrimitiveComponent* OverlappedComponent, 
 		return;
 	}
 
-	bOverlapped = true;
+	const bool bIsOverlapped = AIController->IsOverlapped();
+	if (bIsOverlapped)
+	{
+		return;
+	}
+
+	AIController->SetOverlapped(true);
 
 	UE_LOG(LogTemp, Log, TEXT("Overlap Start"));
 	AIController->OnCheckpointReached();
@@ -103,6 +104,30 @@ void AMapCheckpoint::OnTriggerOverlap(UPrimitiveComponent* OverlappedComponent, 
 void AMapCheckpoint::OnTriggerOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
 	UE_LOG(LogTemp, Log, TEXT("Overlap End"));
-	bOverlapped = false;
+	if (!OtherActor)
+	{
+		return;
+	}
+
+	ASnowboardCharacterBase* SnowboardCharacter = Cast<ASnowboardCharacterBase>(OtherActor);
+	if (!SnowboardCharacter)
+	{
+		return;
+	}
+
+	AController* Controller = SnowboardCharacter->GetController();
+	ASnowboardAIController* AIController = Cast<ASnowboardAIController>(Controller);
+	if (!AIController)
+	{
+		return;
+	}
+
+	const bool bIsOverlapped = AIController->IsOverlapped();
+	if (!bIsOverlapped)
+	{
+		return;
+	}
+
+	AIController->SetOverlapped(false);
 }
 

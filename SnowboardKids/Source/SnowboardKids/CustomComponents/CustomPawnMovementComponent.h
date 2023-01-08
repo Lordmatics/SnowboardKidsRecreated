@@ -31,6 +31,7 @@ private:
 	void ProcessAcceleration(float DeltaTime);
 	void ProcessCharging(float DeltaTime);
 	void ProcessForwardMovement(float DeltaTime, FQuat IncomingQuat);
+	void ProcessAdjacentObstacles(float DeltaTime);
 	void ProcessDetectCollisions(float DeltaTime);
 	bool IsGrounded(FHitResult& Result);
 	bool GetSurfaceNormal(FHitResult& Result);
@@ -185,6 +186,12 @@ public:
 
 	UPROPERTY(EditAnywhere, Category = "Movement", meta = (ClampMin = 1.0))
 	float HeightAdjustScale;
+
+	/*
+	* If we detect an obstacle on our side, how much side velocity should we add.
+	*/
+	UPROPERTY(EditAnywhere, Category = "Movement", meta = (ClampMin = 1.0))
+	float DodgeAdjacentCollisionScale;
 
 	bool bMatchRotToImpactNormal;
 	FVector ImpactPoint;
