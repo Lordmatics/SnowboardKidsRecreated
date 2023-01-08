@@ -75,7 +75,7 @@ UCustomPawnMovementComponent::UCustomPawnMovementComponent()
 	SurfaceNormalRayLength = 100.0f;
 	CheckCollisionRayLength = 70.0f;
 
-	DodgeAdjacentCollisionScale = 100.0f;
+	DodgeAdjacentCollisionScale = 125.0f;
 
 	JumpVector = FVector::ZeroVector;
 	CrashRot = FRotator::ZeroRotator;
@@ -539,7 +539,7 @@ void UCustomPawnMovementComponent::ProcessAdjacentObstacles(float DeltaTime)
 	if (!TranslationZDelta.IsZero())
 	{
 		FHitResult OutHit;
-		SafeMoveUpdatedComponent(TranslationZDelta, RotationLastFrame, false, OutHit, ETeleportType::None);
+		SafeMoveUpdatedComponent(TranslationZDelta, RotationLastFrame, true, OutHit, ETeleportType::None);
 	}
 }
 
@@ -573,15 +573,20 @@ void UCustomPawnMovementComponent::ProcessDetectCollisions(float DeltaTime)
 	bool bPersistent = false;
 	float LifeTime = 1.0f;
 
+	bool bIsObstacleAnotherPlayer = false;
 	if (bHit && HitResult.bBlockingHit)
 	{
+		AActor* HitActor = HitResult.GetActor();
 #if defined DEBUG_SNOWBOARD_KIDS
-		if (GEngine && HitResult.GetActor())
+		if (GEngine && HitActor)
 		{
-			GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Hit: %s"), *HitResult.GetActor()->GetName()));
+			GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Hit: %s"), *HitActor->GetName()));
 		}
 #endif
 		bCollisionAhead = true;
+
+		ASnowboardCharacterBase* SnowboardCharacter = Cast<ASnowboardCharacterBase>(HitActor);
+		bIsObstacleAnotherPlayer = SnowboardCharacter != nullptr;
 	}
 	else
 	{
@@ -609,23 +614,27 @@ void UCustomPawnMovementComponent::ProcessDetectCollisions(float DeltaTime)
 		const float AngleBetweenNormalAndUpRads = FVector::DotProduct(CollisionImpactNormal, FVector::UpVector);
 		const float AngleInDegrees = FMath::RadiansToDegrees(AngleBetweenNormalAndUpRads);
 		const float AbsAngle = FMath::Abs(AngleInDegrees);
-		if (AngleInDegrees < 90.0f && AngleInDegrees > 35.0f)
+		if ( (AngleInDegrees < 90.0f && AngleInDegrees > 35.0f) || bIsObstacleAnotherPlayer)
 		{
 			// Safe
-			float Dot = FVector::DotProduct(ForwardVector, CollisionImpactNormal);
+			// If we crash into another player from the front, just dont do anything.
+			if (!bIsObstacleAnotherPlayer)
+			{
+				float Dot = FVector::DotProduct(ForwardVector, CollisionImpactNormal);
 
-			// Recalibrate rotation Based on inpact
-			// Create matrix relative to current state
-			float NewRoll = UKismetMathLibrary::MakeRotFromXZ(ForwardVector, CollisionImpactNormal).Roll;
-			float NewPitch = UKismetMathLibrary::MakeRotFromYZ(RightVector, CollisionImpactNormal).Pitch;
-			float CurrentYaw = RotationLastFrame.Yaw;
-			FRotator AdjustedRot = FRotator(NewPitch, CurrentYaw, NewRoll);
+				// Recalibrate rotation Based on inpact
+				// Create matrix relative to current state
+				float NewRoll = UKismetMathLibrary::MakeRotFromXZ(ForwardVector, CollisionImpactNormal).Roll;
+				float NewPitch = UKismetMathLibrary::MakeRotFromYZ(RightVector, CollisionImpactNormal).Pitch;
+				float CurrentYaw = RotationLastFrame.Yaw;
+				FRotator AdjustedRot = FRotator(NewPitch, CurrentYaw, NewRoll);
 
-			FHitResult OutHit;
-			float TranslationX = (ForwardVector.X * 50.0f);
-			float TranslationZ = UKismetMathLibrary::SafeDivide(FMath::Abs((Start - HitResult.ImpactPoint).Z), 2.5f);
-			FVector TranslationZDelta = FVector(TranslationX, 0.0f, TranslationZ);
-			SafeMoveUpdatedComponent(TranslationZDelta, AdjustedRot, false, OutHit, ETeleportType::None);
+				FHitResult OutHit;
+				float TranslationX = (ForwardVector.X * 50.0f);
+				float TranslationZ = UKismetMathLibrary::SafeDivide(FMath::Abs((Start - HitResult.ImpactPoint).Z), 2.5f);
+				FVector TranslationZDelta = FVector(TranslationX, 0.0f, TranslationZ);
+				SafeMoveUpdatedComponent(TranslationZDelta, AdjustedRot, false, OutHit, ETeleportType::None);
+			}
 		}
 		else
 		{
