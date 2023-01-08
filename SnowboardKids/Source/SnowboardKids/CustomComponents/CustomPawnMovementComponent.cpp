@@ -23,12 +23,12 @@
 
 UCustomPawnMovementComponent::UCustomPawnMovementComponent()
 {	
-	ForwardSpeed = 10.0f;
-	CrashSpeed = 2.0f;
-	HorizontalSpeed = 2.5f;
-	Acceleration = 1.0f;
-	MaxSpeed = 16.0f;
-	MaxSpeedWhenCharged = 20.0f;
+	ForwardSpeed = 1000.0f;
+	CrashSpeed = 200.0f;
+	HorizontalSpeed = 200.5f;
+	Acceleration = 100.0f;
+	MaxSpeed = 1600.0f;
+	MaxSpeedWhenCharged = 2000.0f;
 	bMovingForward = false;
 	bTurning = false;
 	bJumping = false;
@@ -43,7 +43,7 @@ UCustomPawnMovementComponent::UCustomPawnMovementComponent()
 	MinHeightFromGround = 54.0f;
 	MaxHeightFromGround = 55.5f;
 	HeightFromGroundFactor = 0.0f;
-	HeightAdjustScale = 1.0f;
+	HeightAdjustScale = 100.0f;
 
 	AirTime = 0.0225f;
 	SphereCastRadius = 30.0f;
@@ -54,9 +54,9 @@ UCustomPawnMovementComponent::UCustomPawnMovementComponent()
 	ChargeTimer = 0.0f;
 	ChargeApexTime = 2.5f;
 
-	GravityScale = 3.9f;
-	JumpScale = 6.0f;
-	JumpForwardScale = 2.0f;
+	GravityScale = 300.9f;
+	JumpScale = 600.0f;
+	JumpForwardScale = 200.0f;
 
 	LeftBoardRot = 5.0f;
 	RightBoardRot = 12.5f;
@@ -128,7 +128,7 @@ bool UCustomPawnMovementComponent::ProcessCrashed(float DeltaTime, FQuat Incomin
 	// Might be better to construct a more horizontal forward vec
 	// If we crash into something at an angle, we are going to bounce
 	// Which is not right.
-	FVector DeltaVec = OwnerForward * CrashSpeed;
+	FVector DeltaVec = OwnerForward * CrashSpeed * DeltaTime;
 
 	// Reverse For Abit.
 	DeltaVec *= -1.0f;
@@ -144,11 +144,13 @@ bool UCustomPawnMovementComponent::ProcessCrashed(float DeltaTime, FQuat Incomin
 	if (!OutHit.bBlockingHit)
 	{
 		// Apply some psuedo gravity here.
-		SafeMoveUpdatedComponent(FVector::DownVector, RecoilRotation, true, OutHit, ETeleportType::None);
+		FVector PseudoGravity = FVector::DownVector * GravityScale * DeltaTime;
+		SafeMoveUpdatedComponent(PseudoGravity, RecoilRotation, true, OutHit, ETeleportType::None);
 	}
 	else
 	{
-		SafeMoveUpdatedComponent(FVector::UpVector * GravityScale * 0.5f, RecoilRotation, true, OutHit, ETeleportType::None);
+		FVector PseudoKnockback = FVector::UpVector * GravityScale * 0.5f * DeltaTime;
+		SafeMoveUpdatedComponent(PseudoKnockback, RecoilRotation, true, OutHit, ETeleportType::None);
 	}
 	return true;
 }
@@ -185,13 +187,13 @@ void UCustomPawnMovementComponent::ProcessJump(float DeltaTime)
 
 	// Add Vertical movement - and a bit of forward movement.
 	FVector JmpVec(FVector::UpVector);
-	JmpVec *= (JumpScale * ChargedJumpFactor);
+	JmpVec *= (JumpScale * ChargedJumpFactor * DeltaTime);
 
 	// Only add forward movement, if we're not at max speed.
 	if (ForwardSpeed <= MaxSpeed)
 	{
 		FVector ForwardVector(FVector::ForwardVector);
-		ForwardVector *= JumpForwardScale * ChargedJumpFactor;
+		ForwardVector *= JumpForwardScale * ChargedJumpFactor * DeltaTime;
 		JmpVec += ForwardVector;
 	}
 	
@@ -218,7 +220,7 @@ void UCustomPawnMovementComponent::ProcessGravity(float DeltaTime)
 		// Apply downward movement.
 		bFalling = true;
 		FVector GravityVec(FVector::DownVector);
-		GravityVec *= GravityScale;
+		GravityVec *= GravityScale * DeltaTime;
 
 		bMatchRotToImpactNormal = false;
 		//SetPlaneConstraintEnabled(false);
@@ -336,7 +338,7 @@ void UCustomPawnMovementComponent::ProcessForwardMovement(float DeltaTime, FQuat
 	float YValue = InputVector.Y;
 
 	// Continually move forward.
-	FVector DeltaVec = OwnerForward * ForwardSpeed;
+	FVector DeltaVec = OwnerForward * ForwardSpeed * DeltaTime;
 	if (!bCharging && !bCharged && !bJumping && !bFalling && !bCrashed)
 	{
 		if (ForwardSpeed >= MaxSpeed * 0.33f)
@@ -346,7 +348,7 @@ void UCustomPawnMovementComponent::ProcessForwardMovement(float DeltaTime, FQuat
 			GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Input (Y): %.1f"), InputVector.Y));
 			GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Input (Z): %.1f"), InputVector.Z));
 #endif
-			FVector TurnVec = InputVector * HorizontalSpeed;
+			FVector TurnVec = InputVector * HorizontalSpeed * DeltaTime;
 			DeltaVec += TurnVec;
 		}	
 	}
@@ -367,11 +369,11 @@ void UCustomPawnMovementComponent::ProcessForwardMovement(float DeltaTime, FQuat
 		float LocalMaxHeightFromGround = MaxHeightFromGround + HeightFromGroundFactor;
 		if (Distance > LocalMaxHeightFromGround)
 		{
-			DeltaVec += FVector::DownVector * HeightAdjustScale;
+			DeltaVec += FVector::DownVector * HeightAdjustScale * DeltaTime;
 		}
 		else if (Distance < LocalMinHeightFromGround)
 		{
-			DeltaVec += FVector::UpVector * HeightAdjustScale;
+			DeltaVec += FVector::UpVector * HeightAdjustScale * DeltaTime;
 		}
 
 #if defined DEBUG_SNOWBOARD_KIDS
@@ -838,17 +840,12 @@ bool UCustomPawnMovementComponent::ValidateOwnerComponents()
 
 void UCustomPawnMovementComponent::ConstrainToPlaneNormal(bool Value)
 {
-	//if (!Value)
-	//{
-	//	return;
-	//}
 	SetPlaneConstraintEnabled(Value);
 	bMatchRotToImpactNormal = Value;
 	if (!Value)
 	{
 		FVector DefaultNormal = FVector::ZeroVector;
 		SetPlaneConstraintNormal(DefaultNormal);
-		//ImpactNormal = DefaultNormal;
 	}
 }
 
