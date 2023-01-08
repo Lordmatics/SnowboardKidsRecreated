@@ -66,6 +66,9 @@ struct SNOWBOARDKIDS_API FBoardData
 	UPROPERTY(EditAnywhere, Category = "BoardData")
 	float JumpScale;
 
+	UPROPERTY(EditAnywhere, Category = "BoardData")
+	float JumpForwardScale;
+
 	/*
 	* How much downward velocity should we apply when falling
 	*/
@@ -77,6 +80,9 @@ struct SNOWBOARDKIDS_API FBoardData
 	*/
 	UPROPERTY(EditAnywhere, Category = "BoardData", meta = (ClampMin = -1.0f, ClampMax = 1.0f))
 	float TurnLimit;
+
+	UPROPERTY(EditAnywhere, Category = "BoardData", meta = (ClampMin = -1.0f, ClampMax = 1.0f))
+	float TurnRateInterpSpeed;
 };
 
 USTRUCT(BlueprintType)

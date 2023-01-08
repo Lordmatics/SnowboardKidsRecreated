@@ -101,8 +101,8 @@ public:
 	//float GravityScale;
 	//UPROPERTY(EditAnywhere, Category = "Movement")
 	//float JumpScale;
-	UPROPERTY(EditAnywhere, Category = "Movement")
-	float JumpForwardScale;
+	//UPROPERTY(EditAnywhere, Category = "Movement")
+	//float JumpForwardScale;
 
 	float JumpTimer;
 	float ChargeTimer;

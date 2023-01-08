@@ -47,9 +47,7 @@ UCustomPawnMovementComponent::UCustomPawnMovementComponent()
 	JumpApexTime = 0.35f; // Variable depending on skill.
 
 	ChargeTimer = 0.0f;
-	ChargeApexTime = 2.5f;
-
-	JumpForwardScale = 200.0f;
+	ChargeApexTime = 1.75f;
 
 	LeftBoardRot = 5.0f;
 	RightBoardRot = 12.5f;
@@ -180,11 +178,6 @@ bool UCustomPawnMovementComponent::ProcessCrashed(float DeltaTime, FQuat Incomin
 
 void UCustomPawnMovementComponent::ProcessJump(float DeltaTime)
 {
-	if (GEngine)
-	{
-		GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Jumping: %s"), bJumping ? TEXT("True") : TEXT("False") ));
-	}
-
 	if (!bJumping)
 	{
 		return;
@@ -201,22 +194,33 @@ void UCustomPawnMovementComponent::ProcessJump(float DeltaTime)
 		return;
 	}
 
+	APawn* Owner = GetPawnOwner();
+	if (!Owner)
+	{
+		return;
+	}
+
+	const FVector& OwnerLocation = Owner->GetActorLocation();
+	const FVector& OwnerForward = Owner->GetActorForwardVector();
+
 	// ChargedJumpFactor
-	int ChargedJumpFactor = 1;
+	float ChargedJumpFactorVertical = 1;
+	float ChargedJumpFactorForward = 1;
 	if (bChargedJumping)
 	{
-		ChargedJumpFactor = 2;
+		ChargedJumpFactorVertical = 1.33f;
+		ChargedJumpFactorForward = 5.0f;
 	}
 
 	// Add Vertical movement - and a bit of forward movement.
 	FVector JmpVec(FVector::UpVector);
-	JmpVec *= (BoardData.JumpScale * ChargedJumpFactor * DeltaTime);
+	JmpVec *= (BoardData.JumpScale * ChargedJumpFactorVertical * DeltaTime);
 
 	// Only add forward movement, if we're not at max speed.
-	if (BoardData.ForwardSpeed <= BoardData.MaxSpeed)
+	//if (BoardData.ForwardSpeed <= BoardData.MaxSpeed)
 	{
-		FVector ForwardVector(FVector::ForwardVector);
-		ForwardVector *= JumpForwardScale * ChargedJumpFactor * DeltaTime;
+		FVector ForwardVector(OwnerForward);
+		ForwardVector *= BoardData.JumpForwardScale * ChargedJumpFactorForward * DeltaTime;
 		JmpVec += ForwardVector;
 	}
 	
@@ -371,13 +375,17 @@ void UCustomPawnMovementComponent::ProcessForwardMovement(float DeltaTime, FQuat
 	InputVector.Y = FMath::Clamp(InputVector.Y, -1.0f, 1.0f);
 	float YValue = InputVector.Y;
 
+	if (!bIsPlayer)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Yellow, FString::Printf(TEXT("AI Input Y: %.1f"), YValue));
+	}
 	// Continually move forward.	
 	if (YValue != 0.0f && bIsPlayer)
 	{
 		// Turning, decelerate a smidge.
 		if (BoardData.ForwardSpeed >= BoardData.MinTurnSpeed)
 		{
-			float DecelerationScale = 1.0f;
+			float DecelerationScale = 0.0f;
 			const float Threshold = BoardData.MaxSpeed * 0.85f;
 			if (BoardData.ForwardSpeed >= Threshold)
 			{
@@ -676,7 +684,7 @@ void UCustomPawnMovementComponent::ProcessDetectCollisions(float DeltaTime)
 		FVector WorldRight = FVector::RightVector;
 		FVector WorldForward = FVector::ForwardVector;
 		// Projection = V1Dot UnitV2 * UnitV2, how much of V1 is on V2
-		const float AngleBetweenNormalAndUpRads = FVector::DotProduct(CollisionImpactNormal, FVector::UpVector);
+		const float AngleBetweenNormalAndUpRads = FVector::DotProduct(CollisionImpactNormal, RightVector);
 		const float AngleInDegrees = FMath::RadiansToDegrees(AngleBetweenNormalAndUpRads);
 		const float AbsAngle = FMath::Abs(AngleInDegrees);
 		if ( (AngleInDegrees < 90.0f && AngleInDegrees > 35.0f) || bIsObstacleAnotherPlayer)
@@ -1074,17 +1082,11 @@ FRotator UCustomPawnMovementComponent::OrientRotationToFloor(FQuat IncomingQuat,
 		static bool RotateOnHorizontalInput = true;
 		if (RotateOnHorizontalInput)
 		{
-			// Rotate The Character
-			FRotator NewRotation;
-			NewRotation.Add(0.0f, RootYaw, 0.0f); // Z Will do slashes spin rotation lol.
-			if (!bIsPlayer)
-			{
-				RootComp->AddRelativeRotation(NewRotation);
-			}
-			else
-			{
-				RootComp->AddWorldRotation(NewRotation);
-			}			
+			// This way of doing this, fixes the wierd glitch of them insta spinning.
+			const FRotator& CurrentRotation = RootComp->GetComponentRotation();
+			FRotator TargetRotation = CurrentRotation + FRotator(0.0f, RootYaw, RootYaw);
+			FRotator InterpedRot = UKismetMathLibrary::RInterpTo(CurrentRotation, TargetRotation, DeltaTime, BoardData.TurnRateInterpSpeed);
+			RootComp->SetWorldRotation(InterpedRot);
 		}
 	}
 

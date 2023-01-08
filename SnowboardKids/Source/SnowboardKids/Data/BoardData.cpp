@@ -13,8 +13,10 @@ FBoardData::FBoardData() :
 	MaxSpeed(1600.0f),
 	MaxSpeedWhenCharged(2000.0f),
 	JumpScale(600.0f),
+	JumpForwardScale(125.0f),
 	GravityScale(300.0f),
-	TurnLimit(0.5f)
+	TurnLimit(0.5f),
+	TurnRateInterpSpeed(50.0f)
 {
 }
 
@@ -32,6 +34,7 @@ FBoardData::FBoardData(EBoardType BoardType)
 			JumpScale = 800.0f;
 			GravityScale = 450.0f;
 			TurnLimit = 0.75f;
+			TurnRateInterpSpeed =125.0f;
 		}	break;
 		case EBoardType::AllAround:
 		{
@@ -43,6 +46,7 @@ FBoardData::FBoardData(EBoardType BoardType)
 			JumpScale = 600.0f;
 			GravityScale = 300.0f;
 			TurnLimit = 0.5f;
+			TurnRateInterpSpeed = 100.0f;
 		}	break;
 		case EBoardType::Alpine:
 		{
@@ -54,6 +58,7 @@ FBoardData::FBoardData(EBoardType BoardType)
 			JumpScale = 400.0f;
 			GravityScale = 400.0f;
 			TurnLimit = 0.33f;
+			TurnRateInterpSpeed = 75.0f;
 		}	break;
 		case EBoardType::Special:
 		{
@@ -64,11 +69,13 @@ FBoardData::FBoardData(EBoardType BoardType)
 			JumpScale = 600.0f;
 			GravityScale = 300.0f;
 			TurnLimit = 0.5f;
+			TurnRateInterpSpeed = 100.0f;
 		}	break;
 		default:
 			checkNoEntry();
 			break;
 	}
+	JumpForwardScale = 125.0f;
 	RecoverySpeed = 175.0f;
 	MinTurnSpeed = MaxSpeed * 0.33f;
 }
