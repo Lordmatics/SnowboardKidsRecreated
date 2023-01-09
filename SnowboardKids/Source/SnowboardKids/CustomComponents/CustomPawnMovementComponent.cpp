@@ -22,6 +22,8 @@
 	//};
 
 UCustomPawnMovementComponent::UCustomPawnMovementComponent() :
+	CrashMontage(nullptr),
+	TrickFailMontage(nullptr),
 	BoardData(),
 	TrickData()
 {	
@@ -180,7 +182,15 @@ bool UCustomPawnMovementComponent::ProcessCrashed(float DeltaTime, FQuat Incomin
 	FVector DeltaVec = OwnerForward * CrashSpeed * DeltaTime;
 
 	// Reverse For Abit.
-	DeltaVec *= -1.0f;
+	if (!bCrashFromTrick)
+	{
+		DeltaVec *= -1.0f;
+	}
+	else
+	{
+		DeltaVec *= 2.5f;
+	}
+	
 
 	// Need to reset our rotation
 	FRotator RecoilRotation = RotationLastFrame;
@@ -1278,7 +1288,19 @@ void UCustomPawnMovementComponent::TriggerCrash(const FRotator& UpdatedRotation)
 	// Play Animation	
 	if (ASnowboardCharacterBase* SnowboardCharacter = Cast<ASnowboardCharacterBase>(Owner))
 	{
-		SnowboardCharacter->PlayAnimation(CrashMontage);
+		if (bProcessTrick)
+		{
+			bCrashFromTrick = true;
+			SnowboardCharacter->PlayAnimation(TrickFailMontage);
+		}
+		else
+		{
+			// Hard crash into a wall.
+			bCrashFromTrick = false;
+			SnowboardCharacter->PlayAnimation(CrashMontage);
+
+			// TODO: Implement soft crash.
+		}
 	}
 
 	TrickData.ResetTrickData();

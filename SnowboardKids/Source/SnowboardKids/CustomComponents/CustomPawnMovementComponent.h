@@ -189,6 +189,9 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Movement")
 	UAnimMontage* CrashMontage;
 
+	UPROPERTY(EditAnywhere, Category = "Movement")
+	UAnimMontage* TrickFailMontage;
+
 	bool bAdjustedHack = false;
 
 	//UPROPERTY(EditAnywhere, Category = "Movement", meta = (ClampMin = 0.0, ClampMax = 1.0))
@@ -237,4 +240,5 @@ public:
 	FBoardData BoardData;
 	FTrickData TrickData;
 	bool bIsPlayer;
+	bool bCrashFromTrick;
 };
