@@ -21,12 +21,15 @@
 	//	return desiredmin + ratio * (val - valmin);
 	//};
 
-UCustomPawnMovementComponent::UCustomPawnMovementComponent()
+UCustomPawnMovementComponent::UCustomPawnMovementComponent() :
+	BoardData(),
+	TrickData()
 {	
 	CrashSpeed = 200.0f;
 	bMovingForward = false;
 	bTurning = false;
 	bJumping = false;
+	bProcessTrick = false;
 	bFalling = false;
 	bCharged = false;
 	bCharging = false;
@@ -77,7 +80,32 @@ UCustomPawnMovementComponent::UCustomPawnMovementComponent()
 	DelayGravityTimer = 0.0f;
 
 	bIsPlayer = false;
+}
 
+void UCustomPawnMovementComponent::SetVerticalTrickVector(float Value)
+{
+	if (bCharging || bCharged)
+	{
+		TrickData.SetTrickY(Value);
+	}
+}
+
+void UCustomPawnMovementComponent::SetHorizontalTrickVector(float Value)
+{
+	if (bCharging || bCharged)
+	{
+		TrickData.SetTrickX(Value);
+	}
+}
+
+bool UCustomPawnMovementComponent::CanTurn() const
+{
+	bool bCanTurn = true;
+	if (bCharged || bCharging || bProcessTrick)
+	{
+		bCanTurn = false;
+	}
+	return bCanTurn;
 }
 
 void UCustomPawnMovementComponent::BeginPlay()
@@ -230,6 +258,166 @@ void UCustomPawnMovementComponent::ProcessJump(float DeltaTime)
 	SafeMoveUpdatedComponent(JumpVector, RotationLastFrame, true, OutResult, ETeleportType::None);
 }
 
+void UCustomPawnMovementComponent::ProcessTrick(float DeltaTime)
+{
+	if (!bProcessTrick)
+	{
+		return;
+	}
+
+	APawn* Owner = GetPawnOwner();
+	if (!PawnOwner)
+	{
+		return;
+	}
+
+	TrickData.TrickTimer += DeltaTime;
+	ETrickDirection TrickToPerform = TrickData.GetTrickFromCache();
+	switch (TrickToPerform)
+	{
+	case ETrickDirection::North:
+		ProcessForwardRoll(*Owner, DeltaTime);
+		break;
+	case ETrickDirection::East:
+		ProcessRightRoll(*Owner, DeltaTime);
+		break;
+	case ETrickDirection::South:
+		ProcessBackwardsRoll(*Owner, DeltaTime);
+		break;
+	case ETrickDirection::West:
+		ProcessLeftRoll(*Owner, DeltaTime);
+		break;
+	case ETrickDirection::NorthEast:
+		ProcessDiagonalNE(*Owner, DeltaTime);
+		break;
+	case ETrickDirection::SouthEast:
+		ProcessDiagonalSE(*Owner, DeltaTime);
+		break;
+	case ETrickDirection::SouthWest:
+		ProcessDiagonalSW(*Owner, DeltaTime);
+		break;
+	case ETrickDirection::NorthWest:
+		ProcessDiagonalNW(*Owner, DeltaTime);
+		break;
+	case ETrickDirection::Max:
+	default:
+		checkNoEntry();
+		break;
+	}
+}
+
+void UCustomPawnMovementComponent::ProcessForwardRoll(APawn& Owner, float DeltaTime)
+{
+	USceneComponent* RootComp = Owner.GetRootComponent();
+	if (!RootComp)
+	{
+		return;
+	}
+
+	float LerpValue = TrickData.TrickTimer / TrickData.TimeForTrick;
+	LerpValue = FMath::Clamp(LerpValue, 0.0f, 1.0f);
+	TrickData.TrickRotation = FMath::Lerp(0.0f, 360.0f, LerpValue);
+	const float StartingRot = CachedRotationForTrick.Pitch;
+	FRotator DeltaRot = FRotator(StartingRot - TrickData.TrickRotation, CachedRotationForTrick.Yaw, CachedRotationForTrick.Roll);
+	RootComp->SetWorldRotation(DeltaRot);
+
+	if (LerpValue >= 1.0f)//TrickData.TrickTimer >= TrickData.TimeForTrick)
+	{
+		bProcessTrick = false;
+		TrickData.OnTrickPerformed(ETrickDirection::East);
+		TrickData.ResetTrickData();
+	}
+}
+
+void UCustomPawnMovementComponent::ProcessRightRoll(APawn& Owner, float DeltaTime)
+{
+	USceneComponent* RootComp = Owner.GetRootComponent();
+	if (!RootComp)
+	{
+		return;
+	}
+	
+	float LerpValue = TrickData.TrickTimer / TrickData.TimeForTrick;
+	LerpValue = FMath::Clamp(LerpValue, 0.0f, 1.0f);
+	TrickData.TrickRotation = FMath::Lerp(0.0f, 360.0f, LerpValue);
+	const float StartingRot = CachedRotationForTrick.Yaw;
+	FRotator DeltaRot = FRotator(CachedRotationForTrick.Pitch, StartingRot + TrickData.TrickRotation, CachedRotationForTrick.Roll);
+	RootComp->SetWorldRotation(DeltaRot);
+
+	if (LerpValue >= 1.0f)//TrickData.TrickTimer >= TrickData.TimeForTrick)
+	{
+		bProcessTrick = false;
+		TrickData.OnTrickPerformed(ETrickDirection::East);
+		TrickData.ResetTrickData();
+	}
+}
+
+void UCustomPawnMovementComponent::ProcessBackwardsRoll(APawn& Owner, float DeltaTime)
+{
+	USceneComponent* RootComp = Owner.GetRootComponent();
+	if (!RootComp)
+	{
+		return;
+	}
+
+	float LerpValue = TrickData.TrickTimer / TrickData.TimeForTrick;
+	LerpValue = FMath::Clamp(LerpValue, 0.0f, 1.0f);
+	TrickData.TrickRotation = FMath::Lerp(0.0f, 360.0f, LerpValue);
+	const float StartingRot = CachedRotationForTrick.Pitch;
+	FRotator DeltaRot = FRotator(StartingRot + TrickData.TrickRotation, CachedRotationForTrick.Yaw,  CachedRotationForTrick.Roll);
+	RootComp->SetWorldRotation(DeltaRot);
+
+	if (LerpValue >= 1.0f)//TrickData.TrickTimer >= TrickData.TimeForTrick)
+	{
+		bProcessTrick = false;
+		TrickData.OnTrickPerformed(ETrickDirection::East);
+		TrickData.ResetTrickData();
+	}
+}
+
+void UCustomPawnMovementComponent::ProcessLeftRoll(APawn& Owner, float DeltaTime)
+{
+	USceneComponent* RootComp = Owner.GetRootComponent();
+	if (!RootComp)
+	{
+		return;
+	}
+
+	float LerpValue = TrickData.TrickTimer / TrickData.TimeForTrick;
+	LerpValue = FMath::Clamp(LerpValue, 0.0f, 1.0f);
+	TrickData.TrickRotation = FMath::Lerp(0.0f, 360.0f, LerpValue);
+	const float StartingRot = CachedRotationForTrick.Yaw;
+	FRotator DeltaRot = FRotator(CachedRotationForTrick.Pitch, StartingRot - TrickData.TrickRotation, CachedRotationForTrick.Roll);
+	RootComp->SetWorldRotation(DeltaRot);
+
+	if (LerpValue >= 1.0f)//TrickData.TrickTimer >= TrickData.TimeForTrick)
+	{
+		bProcessTrick = false;
+		TrickData.OnTrickPerformed(ETrickDirection::East);
+		TrickData.ResetTrickData();
+	}
+}
+
+void UCustomPawnMovementComponent::ProcessDiagonalNE(APawn& Owner, float DeltaTime)
+{
+
+}
+
+void UCustomPawnMovementComponent::ProcessDiagonalSE(APawn& Owner, float DeltaTime)
+{
+
+}
+
+void UCustomPawnMovementComponent::ProcessDiagonalSW(APawn& Owner, float DeltaTime)
+{
+
+}
+
+void UCustomPawnMovementComponent::ProcessDiagonalNW(APawn& Owner, float DeltaTime)
+{
+
+}
+
 void UCustomPawnMovementComponent::ProcessGravity(float DeltaTime)
 {
 	bNoSurfaceNormalFoundThisFrame = false;
@@ -369,7 +557,7 @@ void UCustomPawnMovementComponent::ProcessForwardMovement(float DeltaTime, FQuat
 	const FVector& OwnerLocation = Owner->GetActorLocation();
 	const FVector& CamFoward = Camera->GetForwardVector();
 	const FVector& RightVec = Owner->GetActorRightVector();
-	const FVector& OwnerForward = Owner->GetActorForwardVector();
+	const FVector& OwnerForward = bProcessTrick ? CachedForwardVector : Owner->GetActorForwardVector();
 
 	FVector InputVector = ConsumeInputVector();
 	InputVector.Y = FMath::Clamp(InputVector.Y, -1.0f, 1.0f);
@@ -397,7 +585,7 @@ void UCustomPawnMovementComponent::ProcessForwardMovement(float DeltaTime, FQuat
 	}
 
 	FVector DeltaVec = OwnerForward * BoardData.ForwardSpeed * DeltaTime;
-	if (bIsPlayer && !bCharging && !bCharged && !bJumping && !bFalling && !bCrashed)
+	if (bIsPlayer && !bCharging && !bCharged && !bJumping && !bFalling && !bCrashed && !bProcessTrick)
 	{
 		if (BoardData.ForwardSpeed >= BoardData.MaxSpeed * 0.66f)
 		{
@@ -740,6 +928,7 @@ void UCustomPawnMovementComponent::ProcessMovement(float DeltaTime, FQuat Incomi
 	ProcessAcceleration(DeltaTime);
 	ProcessCharging(DeltaTime);
 	ProcessForwardMovement(DeltaTime, IncomingQuat);
+	ProcessTrick(DeltaTime);
 
 	// Maybe make this AI only + Players with Accessibility option.
 	// Makes it harder to crash into walls.
@@ -750,6 +939,12 @@ void UCustomPawnMovementComponent::ProcessMovement(float DeltaTime, FQuat Incomi
 
 void UCustomPawnMovementComponent::TriggerJump()
 {
+	APawn* Owner = GetPawnOwner();
+	if (!Owner)
+	{
+		return;
+	}
+
 	if (bJumping || bFalling)
 	{
 		return;
@@ -770,6 +965,19 @@ void UCustomPawnMovementComponent::TriggerJump()
 	CancelCharge();
 
 	bJumping = true;
+
+	if (TrickData.IsTrickBufferred())
+	{
+		TrickData.UpdateCache();
+		bProcessTrick = true;
+		CachedForwardVector = Owner->GetActorForwardVector();
+		CachedRotationForTrick = Owner->GetRootComponent()->GetComponentRotation();
+		//UE_LOG(LogTemp, Log, TEXT("Cached Roll: %.1f"), CachedRotationForTrick.Roll);
+		//UE_LOG(LogTemp, Log, TEXT("Cached Pitch: %.1f"), CachedRotationForTrick.Pitch);
+		//UE_LOG(LogTemp, Log, TEXT("Cached Yaw: %.1f"), CachedRotationForTrick.Yaw);
+
+
+	}
 }
 
 void UCustomPawnMovementComponent::CancelJump()
@@ -953,6 +1161,12 @@ void UCustomPawnMovementComponent::OnLanded()
 	ConstrainToPlaneNormal(true);
 	bFalling = false;
 	DelayGravityTimer = 0.0f;
+
+	// Fall over if we hit the floor whilst mid trick.
+	if (bProcessTrick)
+	{		
+		TriggerCrash(CachedRotationForTrick);
+	}
 }
 
 bool UCustomPawnMovementComponent::ValidateOwnerComponents()
@@ -1046,6 +1260,15 @@ void UCustomPawnMovementComponent::TriggerCrash(const FRotator& UpdatedRotation)
 		return;
 	}
 
+	USceneComponent* Root = Owner->GetRootComponent();
+	if (Root && bProcessTrick)
+	{
+		// Might need to make the tricks all montages
+		// And investigate additive animations.
+		// as the blending from failing a trick is awful with this approach currently.
+		Root->SetWorldRotation(UpdatedRotation);
+	}
+
 	UWorld* World = GetWorld();
 	if (!World)
 	{
@@ -1057,6 +1280,9 @@ void UCustomPawnMovementComponent::TriggerCrash(const FRotator& UpdatedRotation)
 	{
 		SnowboardCharacter->PlayAnimation(CrashMontage);
 	}
+
+	TrickData.ResetTrickData();
+	bProcessTrick = false;
 }
 
 FRotator UCustomPawnMovementComponent::OrientRotationToFloor(FQuat IncomingQuat, APawn& Owner, const FVector& DeltaVec, const float YValue, float& PitchResult)
@@ -1070,6 +1296,11 @@ FRotator UCustomPawnMovementComponent::OrientRotationToFloor(FQuat IncomingQuat,
 
 	UWorld* World = GetWorld();
 	if (!World)
+	{
+		return UpdatedRotation;
+	}
+
+	if (bProcessTrick)
 	{
 		return UpdatedRotation;
 	}
@@ -1090,7 +1321,7 @@ FRotator UCustomPawnMovementComponent::OrientRotationToFloor(FQuat IncomingQuat,
 		}
 	}
 
-	RotateBoard(Owner, YValue);
+	//RotateBoard(Owner, YValue);
 
 	const FVector& OwnerLocation = Owner.GetActorLocation();
 	const FRotator& RootRotation = RootComp->GetComponentRotation();

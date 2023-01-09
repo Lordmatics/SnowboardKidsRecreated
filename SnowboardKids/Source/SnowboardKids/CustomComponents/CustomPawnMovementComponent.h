@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/PawnMovementComponent.h"
 #include "../Data/BoardData.h"
+#include "../Data/TrickData.h"
 #include "CustomPawnMovementComponent.generated.h"
 
 class UCameraComponent;
@@ -25,6 +26,10 @@ public:
 
 	FORCEINLINE float GetCurrentSpeed() const { return BoardData.ForwardSpeed; }
 
+	void SetVerticalTrickVector(float Value);
+	void SetHorizontalTrickVector(float Value);
+	bool CanTurn() const;
+
 protected:
 
 	virtual void BeginPlay() override;
@@ -32,6 +37,17 @@ protected:
 private:
 	bool ProcessCrashed(float DeltaTime, FQuat IncomingQuat);
 	void ProcessJump(float DeltaTime);
+	void ProcessTrick(float DeltaTime);
+
+	void ProcessForwardRoll(APawn& Owner, float DeltaTime);
+	void ProcessRightRoll(APawn& Owner, float DeltaTime);
+	void ProcessBackwardsRoll(APawn& Owner, float DeltaTime);
+	void ProcessLeftRoll(APawn& Owner, float DeltaTime);
+	void ProcessDiagonalNE(APawn& Owner, float DeltaTime);
+	void ProcessDiagonalSE(APawn& Owner, float DeltaTime);
+	void ProcessDiagonalSW(APawn& Owner, float DeltaTime);
+	void ProcessDiagonalNW(APawn& Owner, float DeltaTime);
+
 	void ProcessGravity(float DeltaTime);
 	void ProcessAcceleration(float DeltaTime);
 	void ProcessCharging(float DeltaTime);
@@ -91,11 +107,14 @@ public:
 	bool bMovingForward;
 	bool bTurning;
 	bool bJumping;
+	bool bProcessTrick;
 	bool bChargedJumping;
 	bool bFalling;
 	bool bCharging;
 	bool bCharged;
 	bool bSouthInputIgnored;
+	FVector CachedForwardVector;
+	FRotator CachedRotationForTrick;
 
 	//UPROPERTY(EditAnywhere, Category = "Movement")
 	//float GravityScale;
@@ -216,5 +235,6 @@ public:
 	EBoardType BoardType;
 
 	FBoardData BoardData;
+	FTrickData TrickData;
 	bool bIsPlayer;
 };

@@ -78,9 +78,11 @@ ASnowboardCharacterBase::ASnowboardCharacterBase(const FObjectInitializer& Objec
 	ThirdPersonCamera->SetupAttachment(ThirdPersonSpringArm, USpringArmComponent::SocketName);
 	ThirdPersonCamera->bUsePawnControlRotation = false;
 	
-
 	SnowboardMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("SnowboardMesh"));
-	SnowboardMesh->SetupAttachment(SkeletalMesh, SocketNames::FootSocket);
+	//SnowboardMesh->AttachToComponent(SkeletalMesh, FAttachmentTransformRules::SnapToTargetNotIncludingScale, SocketNames::FootSocket);
+	//SnowboardMesh->SetAttachSocketName(SocketNames::FootSocket);
+	//SnowboardMesh->SetAttachParent(SkeletalMesh);
+	//SnowboardMesh->SetupAttachment(SkeletalMesh, SocketNames::FootSocket);
 	//SnowboardMesh->SetRelativeScale3D(FVector(0.05f));
 	//SnowboardMesh->SetRelativeLocation(FVector(0.326331f, 0.0f, 0.978994f));
 	SnowboardMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
@@ -150,9 +152,10 @@ void ASnowboardCharacterBase::BeginPlay()
 		return;
 	}
 
-	if(SnowboardMesh)
-		SnowboardMesh->SetupAttachment(SkeletalMesh, SocketNames::FootSocket);
-
+	if (SnowboardMesh)
+	{//	SnowboardMesh->SetupAttachment(SkeletalMesh, SocketNames::FootSocket);
+		SnowboardMesh->AttachToComponent(SkeletalMesh, FAttachmentTransformRules::SnapToTargetNotIncludingScale, SocketNames::FootSocket);
+	}
 	const TArray<UMaterialInterface*>& Materials = SkeletalMesh->GetMaterials();
 	int Index = 0;
 	for (UMaterialInterface* Material : Materials)
@@ -247,7 +250,10 @@ void ASnowboardCharacterBase::UnPossessed()
 
 void ASnowboardCharacterBase::OnNorthPressed()
 {
-
+	if (UCustomPawnMovementComponent* CharacterMovementComponent = GetCharacterMovement())
+	{
+		//CharacterMovementComponent->UpdateLastKnownInput();
+	}
 }
 
 void ASnowboardCharacterBase::OnNorthReleased()
@@ -330,16 +336,17 @@ void ASnowboardCharacterBase::MoveInDirection(EAxis::Type Axis, const float Valu
 
 void ASnowboardCharacterBase::MoveForward(float Value)
 {
+	if (!CharacterMovement)
+	{
+		return;
+	}
+
+	CharacterMovement->SetVerticalTrickVector(Value);
 }
 
 void ASnowboardCharacterBase::MoveRight(float Value)
 {
 	if (!Controller)
-	{
-		return;
-	}
-
-	if (Value == 0.0f)
 	{
 		return;
 	}
@@ -350,6 +357,18 @@ void ASnowboardCharacterBase::MoveRight(float Value)
 	}
 
 	if (!CharacterMovement)
+	{
+		return;
+	}
+
+	CharacterMovement->SetHorizontalTrickVector(Value);
+
+	if (Value == 0.0f)
+	{
+		return;
+	}
+
+	if (!CharacterMovement->CanTurn())
 	{
 		return;
 	}
