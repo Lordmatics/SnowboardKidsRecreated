@@ -42,10 +42,10 @@ private:
 	UPROPERTY(Transient)
 	ASnowboardCharacterBase* PossessedPawn;
 
-	UPROPERTY(Transient)
+	UPROPERTY(Transient, VisibleAnywhere, Category = "Navigation")
 	AMapCheckpoint* CurrentCheckpoint;
 
-	UPROPERTY(Transient)
+	UPROPERTY(Transient, VisibleAnywhere, Category = "Navigation")
 	AAICheckpointNode* CurrentNode;
 
 	int CurrentCheckpointIndex;

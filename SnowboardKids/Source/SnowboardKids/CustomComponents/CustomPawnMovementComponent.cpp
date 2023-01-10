@@ -572,7 +572,6 @@ void UCustomPawnMovementComponent::ProcessForwardMovement(float DeltaTime, FQuat
 	FVector InputVector = ConsumeInputVector();
 	InputVector.Y = FMath::Clamp(InputVector.Y, -1.0f, 1.0f);
 	float YValue = InputVector.Y;
-
 	if (!bIsPlayer)
 	{
 		GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Yellow, FString::Printf(TEXT("AI Input Y: %.1f"), YValue));
@@ -642,15 +641,23 @@ void UCustomPawnMovementComponent::ProcessForwardMovement(float DeltaTime, FQuat
 	
 	if (AnimInstance)
 	{
-		AnimInstance->SetSpeed(BoardData.ForwardSpeed);				
-		AnimInstance->SetTilt(YValue);	
-#if defined DEBUG_SNOWBOARD_KIDS
-		if (GEngine)
+		AnimInstance->SetSpeed(BoardData.ForwardSpeed);		
+		float AITiltValue = YValue;
+		if (!bIsPlayer)
+		{
+			if (YValue < 0.3f)
+			{
+				AITiltValue = 0.0f;
+			}
+		}
+		AnimInstance->SetTilt(AITiltValue);
+//#if defined DEBUG_SNOWBOARD_KIDS
+		if (GEngine && !bIsPlayer)
 		{
 			GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("BoardData.ForwardSpeed: %.1f"), BoardData.ForwardSpeed));
-			GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("YValue: %.1f"), YValue));
+			GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("AITiltValue: %.3f"), AITiltValue));
 		}
-#endif
+//#endif
 	}
 
 	//TODO: Fix bug whereby driving down a slope, and hitting a flat plane, causing a weird rotation spike, from the MakeRot function on the pitch.
