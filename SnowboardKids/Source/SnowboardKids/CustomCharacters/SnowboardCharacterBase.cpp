@@ -361,6 +361,11 @@ void ASnowboardCharacterBase::MoveRight(float Value)
 		return;
 	}
 
+	//if (Value < 0.0f)
+	//{
+	//	UE_LOG(LogTemp, Log, TEXT("MoveRightValue: %.1f"), Value);
+	//}
+	
 	CharacterMovement->SetHorizontalTrickVector(Value);
 
 	if (Value == 0.0f)

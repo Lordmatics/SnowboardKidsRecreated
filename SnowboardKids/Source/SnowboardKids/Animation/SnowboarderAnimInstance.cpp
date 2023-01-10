@@ -31,7 +31,7 @@ void USnowboarderAnimInstance::SetTrickVector(const FTrickVector& InTrickVector)
 	const float X = InTrickVector.X;
 	const float Y = InTrickVector.Y;
 
-	const bool bHorizontalOverVertical = X > Y;
+	const bool bHorizontalOverVertical = X > 0.0f ? X > Y : X < Y;
 	if (bHorizontalOverVertical)
 	{
 		if (X > 0.0f)
@@ -46,7 +46,7 @@ void USnowboarderAnimInstance::SetTrickVector(const FTrickVector& InTrickVector)
 		{
 			// Left
 			SetTrickVectorInternal(ETrickDirection::West);
-			//UE_LOG(LogTemp, Log, TEXT("Setting Grab Data West"));
+			UE_LOG(LogTemp, Log, TEXT("Setting Grab Data West"));
 			bHasGrabData = true;
 			return;
 		}

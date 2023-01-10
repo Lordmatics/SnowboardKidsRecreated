@@ -90,7 +90,7 @@ UCustomPawnMovementComponent::UCustomPawnMovementComponent() :
 
 void UCustomPawnMovementComponent::SetVerticalTrickVector(float Value)
 {
-	bool bStoreTrickVector = bCharging || bCharged || (bFalling && !bProcessTrick);
+	bool bStoreTrickVector = bCharging || bCharged || ((bFalling || bJumping) && !bProcessTrick);
 	if (bStoreTrickVector)
 	{
 		TrickData.SetTrickY(Value);
@@ -99,7 +99,7 @@ void UCustomPawnMovementComponent::SetVerticalTrickVector(float Value)
 
 void UCustomPawnMovementComponent::SetHorizontalTrickVector(float Value)
 {
-	bool bStoreTrickVector = bCharging || bCharged || (bFalling && !bProcessTrick);
+	bool bStoreTrickVector = bCharging || bCharged || ( (bFalling || bJumping) && !bProcessTrick);
 	if (bStoreTrickVector)
 	{
 		TrickData.SetTrickX(Value);
@@ -683,7 +683,9 @@ void UCustomPawnMovementComponent::ProcessForwardMovement(float DeltaTime, FQuat
 					FTrickVector Copy(TrickData.TrickVector);
 					Copy.Y = 0.0f;
 					AnimInstance->SetTrickVector(Copy);
-					//UE_LOG(LogTemp, Log, TEXT("Setting Grab Data"));
+					
+					if(Copy.X < 0.0f)
+						UE_LOG(LogTemp, Log, TEXT("Setting Grab Data: %.1f"), Copy.X);
 				}				
 			}
 			else
