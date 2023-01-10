@@ -34,7 +34,7 @@ FBoardData::FBoardData(EBoardType BoardType)
 			JumpScale = 800.0f;
 			GravityScale = 450.0f;
 			TurnLimit = 0.75f;
-			TurnRateInterpSpeed =125.0f;
+			TurnRateInterpSpeed =155.0f;
 		}	break;
 		case EBoardType::AllAround:
 		{
