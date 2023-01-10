@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Animation/AnimInstance.h"
+#include "SnowboardKids/Data/TrickData.h"
 #include "SnowboarderAnimInstance.generated.h"
 
 /**
@@ -29,6 +30,14 @@ public:
 
 	FORCEINLINE float GetSpeed() const { return ForwardSpeed; }
 	FORCEINLINE void SetSpeed(float Value) { ForwardSpeed = Value; }
+
+	FORCEINLINE bool HasGrabData() const { return bHasGrabData; }
+	void ResetTrickVector();
+	void SetTrickVector(const FTrickVector& InTrickVector);
+
+private:
+	void SetTrickVectorInternal(ETrickDirection InTrickDirection);
+
 private:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation", meta = (AllowPrivateAccess = "true"))
@@ -42,4 +51,13 @@ private:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation", meta = (AllowPrivateAccess = "true"))
 	float ForwardSpeed;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation", meta = (AllowPrivateAccess = "true"))
+	bool bHasGrabData;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation", meta = (AllowPrivateAccess = "true"))
+	bool bHasGrabDataChanged;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation", meta = (AllowPrivateAccess = "true"))
+	ETrickDirection CurrentTrickVector;
 };

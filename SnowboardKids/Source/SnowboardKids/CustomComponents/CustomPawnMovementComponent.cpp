@@ -80,13 +80,18 @@ UCustomPawnMovementComponent::UCustomPawnMovementComponent() :
 
 	TimeBeforeGravity = 1.2f;
 	DelayGravityTimer = 0.0f;
+	TimeSpentFalling = 0.0f;
+	GroundDistRangeForGrabs = 55.0f;
+	CacheGrabDataThreshold = 0.025f;
+	CurrentDistanceFromGround = 0.0f;
 
 	bIsPlayer = false;
 }
 
 void UCustomPawnMovementComponent::SetVerticalTrickVector(float Value)
 {
-	if (bCharging || bCharged)
+	bool bStoreTrickVector = bCharging || bCharged || (bFalling && !bProcessTrick);
+	if (bStoreTrickVector)
 	{
 		TrickData.SetTrickY(Value);
 	}
@@ -94,7 +99,8 @@ void UCustomPawnMovementComponent::SetVerticalTrickVector(float Value)
 
 void UCustomPawnMovementComponent::SetHorizontalTrickVector(float Value)
 {
-	if (bCharging || bCharged)
+	bool bStoreTrickVector = bCharging || bCharged || (bFalling && !bProcessTrick);
+	if (bStoreTrickVector)
 	{
 		TrickData.SetTrickX(Value);
 	}
@@ -431,10 +437,10 @@ void UCustomPawnMovementComponent::ProcessDiagonalNW(APawn& Owner, float DeltaTi
 void UCustomPawnMovementComponent::ProcessGravity(float DeltaTime)
 {
 	bNoSurfaceNormalFoundThisFrame = false;
-
 	if (bJumping)
 	{
 		ConstrainToPlaneNormal(false);
+		CurrentDistanceFromGround = FLT_MAX;
 		return;
 	}
 
@@ -444,7 +450,7 @@ void UCustomPawnMovementComponent::ProcessGravity(float DeltaTime)
 	{
 		// Apply downward movement.
 		bFalling = true;
-
+		TimeSpentFalling += DeltaTime;
 		DelayGravityTimer += DeltaTime;
 		//if (DelayGravityTimer < TimeBeforeGravity)
 		//{
@@ -473,12 +479,13 @@ void UCustomPawnMovementComponent::ProcessGravity(float DeltaTime)
 		ConstrainToPlaneNormal(true);
 		ImpactPoint = Hitresult.ImpactPoint;
 		ImpactNormal = Hitresult.ImpactNormal;
-
+		TimeSpentFalling = 0.0f;
 		//DrawDebugLine(GetWorld(), Hitresult.ImpactPoint, Hitresult.ImpactPoint + (ImpactNormal.Normalize() * 45.0f), FColor::Green, false, 3.0f);
 		OnLanded();
 	}
 	else
 	{
+		TimeSpentFalling = 0.0f;
 		// Grounded - make sure our upvector matches the impact normal of the floor.
 		const bool SurfaceNormalFound = GetSurfaceNormal(Hitresult);
 		if(SurfaceNormalFound)
@@ -576,8 +583,15 @@ void UCustomPawnMovementComponent::ProcessForwardMovement(float DeltaTime, FQuat
 	{
 		GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Yellow, FString::Printf(TEXT("AI Input Y: %.1f"), YValue));
 	}
+
+	bool bHasGrabData = false;
+	if (AnimInstance)
+	{
+		bHasGrabData = AnimInstance->HasGrabData();
+	}
+
 	// Continually move forward.	
-	if (YValue != 0.0f && bIsPlayer)
+	if (YValue != 0.0f && bIsPlayer && !bHasGrabData)
 	{
 		// Turning, decelerate a smidge.
 		if (BoardData.ForwardSpeed >= BoardData.MinTurnSpeed)
@@ -594,7 +608,7 @@ void UCustomPawnMovementComponent::ProcessForwardMovement(float DeltaTime, FQuat
 	}
 
 	FVector DeltaVec = OwnerForward * BoardData.ForwardSpeed * DeltaTime;
-	if (bIsPlayer && !bCharging && !bCharged && !bJumping && !bFalling && !bCrashed && !bProcessTrick)
+	if (bIsPlayer && !bCharging && !bCharged && !bJumping && !bFalling && !bCrashed && !bProcessTrick && !bHasGrabData)
 	{
 		if (BoardData.ForwardSpeed >= BoardData.MaxSpeed * 0.66f)
 		{
@@ -645,12 +659,40 @@ void UCustomPawnMovementComponent::ProcessForwardMovement(float DeltaTime, FQuat
 		float AITiltValue = YValue;
 		if (!bIsPlayer)
 		{
+			// This ensures the AI play the idle animation instead of spamming the blend space, their turning is more... rigid so yeah.
 			if (YValue < 0.3f)
 			{
 				AITiltValue = 0.0f;
 			}
 		}
 		AnimInstance->SetTilt(AITiltValue);
+
+		if (bIsPlayer)
+		{
+			//if (TimeSpentFalling > CacheGrabDataThreshold)
+			
+			if (GEngine)
+			{
+				GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Yellow, FString::Printf(TEXT("Dist: %.1f"), CurrentDistanceFromGround));					
+			}
+
+			if(CurrentDistanceFromGround > GroundDistRangeForGrabs || bJumping)
+			{
+				if ((bJumping || bFalling) && !bProcessTrick)
+				{
+					FTrickVector Copy(TrickData.TrickVector);
+					Copy.Y = 0.0f;
+					AnimInstance->SetTrickVector(Copy);
+					//UE_LOG(LogTemp, Log, TEXT("Setting Grab Data"));
+				}				
+			}
+			else
+			{
+				AnimInstance->ResetTrickVector();
+			}
+		}
+
+
 //#if defined DEBUG_SNOWBOARD_KIDS
 		if (GEngine && !bIsPlayer)
 		{
@@ -664,6 +706,12 @@ void UCustomPawnMovementComponent::ProcessForwardMovement(float DeltaTime, FQuat
 	// It seems to happen when there is no surface normal found and uses an old value for it.
 	// Handle Rotating slightly based on input.
 	float NewPitch = 0.0f;
+
+	if (bHasGrabData)
+	{
+		YValue = 0.0f;
+	}
+
 	FRotator UpdatedRotation = OrientRotationToFloor(IncomingQuat, *Owner, DeltaVec, YValue, NewPitch);
 
 	// This bounces from - 180 and 180 alot when rotating
@@ -1084,6 +1132,10 @@ bool UCustomPawnMovementComponent::IsGrounded(FHitResult& Result)
 			GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString::Printf(TEXT("Hit: %s"), *Result.GetActor()->GetName()));
 		}
 #endif
+
+		FVector GroundVector = Result.ImpactPoint - (Start - FVector(0.0f, 0.0f, 45.0f));
+		const float DistToFloor = GroundVector.Size();
+		CurrentDistanceFromGround = DistToFloor;
 		return true;
 	}
 	else
@@ -1095,8 +1147,10 @@ bool UCustomPawnMovementComponent::IsGrounded(FHitResult& Result)
 		}
 #endif
 
+		CurrentDistanceFromGround = FLT_MAX;
 		return false;		
 	}
+	CurrentDistanceFromGround = FLT_MAX;
 	return false;
 }
 
@@ -1180,7 +1234,13 @@ void UCustomPawnMovementComponent::OnLanded()
 	DelayGravityTimer = 0.0f;
 
 	// Fall over if we hit the floor whilst mid trick.
-	if (bProcessTrick)
+	bool bHasGrabData = false;
+	if (AnimInstance)
+	{
+		bHasGrabData = AnimInstance->HasGrabData();
+	}
+
+	if (bProcessTrick || bHasGrabData)
 	{		
 		TriggerCrash(CachedRotationForTrick);
 	}

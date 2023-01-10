@@ -233,6 +233,10 @@ public:
 
 	float TimeBeforeGravity;
 	float DelayGravityTimer;
+	float TimeSpentFalling;
+	float CurrentDistanceFromGround;
+	float GroundDistRangeForGrabs;
+	float CacheGrabDataThreshold;
 
 	UPROPERTY(EditAnywhere, Category = "Movement")
 	EBoardType BoardType;

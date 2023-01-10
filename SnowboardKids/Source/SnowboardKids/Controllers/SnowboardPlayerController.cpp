@@ -161,6 +161,8 @@ void ASnowboardPlayerController::MoveRight(float Value)
 	}
 
 	PossessedPawn->MoveRight(Value);
+	//if(Value != 0.0f)
+	//	UE_LOG(LogTemp, Log, TEXT("MoveRight: %.1f"), Value);
 }
 
 void ASnowboardPlayerController::TurnAtRate(float Rate)
