@@ -69,6 +69,16 @@ public:
 	void OnSouthReleased();
 	void OnWestPressed();
 	void OnWestReleased();
+	
+	void OnDPadNorthPressed();
+	void OnDPadNorthReleased();
+	void OnDPadEastPressed();
+	void OnDPadEastReleased();
+	void OnDPadSouthPressed();
+	void OnDPadSouthReleased();
+	void OnDPadWestPressed();
+	void OnDPadWestReleased();
+
 	void MoveInDirection(EAxis::Type Axis, const float Value);
 	void MoveForward(float Value);
 	void MoveRight(float Value);

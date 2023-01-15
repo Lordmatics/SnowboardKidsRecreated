@@ -30,6 +30,9 @@ public:
 	void SetHorizontalTrickVector(float Value);
 	bool CanTurn() const;
 
+	void RequestGrab(ETrickDirection Trick);
+	void CancelGrab(ETrickDirection Trick);
+
 protected:
 
 	virtual void BeginPlay() override;
@@ -245,4 +248,5 @@ public:
 	FTrickData TrickData;
 	bool bIsPlayer;
 	bool bCrashFromTrick;
+	bool bIgnoreNextJumpRelease;
 };

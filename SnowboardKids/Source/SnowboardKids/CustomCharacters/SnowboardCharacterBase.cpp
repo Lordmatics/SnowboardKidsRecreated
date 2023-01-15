@@ -298,6 +298,70 @@ void ASnowboardCharacterBase::OnWestReleased()
 
 }
 
+void ASnowboardCharacterBase::OnDPadNorthPressed()
+{
+	if (CharacterMovement)
+	{
+		CharacterMovement->RequestGrab(ETrickDirection::North);
+	}
+}
+
+void ASnowboardCharacterBase::OnDPadNorthReleased()
+{
+	if (CharacterMovement)
+	{
+		CharacterMovement->CancelGrab(ETrickDirection::North);
+	}
+}
+
+void ASnowboardCharacterBase::OnDPadEastPressed()
+{
+	if (CharacterMovement)
+	{
+		CharacterMovement->RequestGrab(ETrickDirection::East);
+	}
+}
+
+void ASnowboardCharacterBase::OnDPadEastReleased()
+{
+	if (CharacterMovement)
+	{
+		CharacterMovement->CancelGrab(ETrickDirection::East);
+	}
+}
+
+void ASnowboardCharacterBase::OnDPadSouthPressed()
+{
+	if (CharacterMovement)
+	{
+		CharacterMovement->RequestGrab(ETrickDirection::South);
+	}
+}
+
+void ASnowboardCharacterBase::OnDPadSouthReleased()
+{
+	if (CharacterMovement)
+	{
+		CharacterMovement->CancelGrab(ETrickDirection::South);
+	}
+}
+
+void ASnowboardCharacterBase::OnDPadWestPressed()
+{
+	if (CharacterMovement)
+	{
+		CharacterMovement->RequestGrab(ETrickDirection::West);
+	}
+}
+
+void ASnowboardCharacterBase::OnDPadWestReleased()
+{
+	if (CharacterMovement)
+	{
+		CharacterMovement->CancelGrab(ETrickDirection::West);
+	}
+}
+
 void ASnowboardCharacterBase::MoveInDirection(EAxis::Type Axis, const float Value)
 {
 	if (!Controller)

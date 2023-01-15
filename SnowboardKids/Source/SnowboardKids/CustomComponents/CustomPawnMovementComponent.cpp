@@ -37,6 +37,7 @@ UCustomPawnMovementComponent::UCustomPawnMovementComponent() :
 	bCharging = false;
 	bSouthInputIgnored = false;
 	bCrashed = false;
+	bIgnoreNextJumpRelease = false;
 
 	bNoSurfaceNormalFoundThisFrame = false;
 
@@ -114,6 +115,51 @@ bool UCustomPawnMovementComponent::CanTurn() const
 		bCanTurn = false;
 	}
 	return bCanTurn;
+}
+
+void UCustomPawnMovementComponent::RequestGrab(ETrickDirection Trick)
+{
+	if (!AnimInstance)
+	{
+		return;
+	}
+
+	const bool bIsGrabbed = AnimInstance->HasGrabData();
+	if (bIsGrabbed)
+	{
+		// Need to release grab before trying a new one.
+
+		// TODO: Maybe buffer 1 grab here - So it can seamlessly blend into the next one if its pressed.
+		//return;
+
+		// TODO: OKAY!
+		// So Queue up inputs here
+		// Clear them all on landed.
+		// When cancel grab is hit for an input, pop that trick from teh queue
+		// Then we can instantly swap to the next grab.
+	}
+
+	if (CurrentDistanceFromGround > GroundDistRangeForGrabs || bJumping)
+	{
+		if ((bJumping || bFalling) )//&& !bProcessTrick)
+		{			
+			AnimInstance->SetTrickDirection(Trick);		
+		}
+	}	
+}
+
+void UCustomPawnMovementComponent::CancelGrab(ETrickDirection Trick)
+{
+	if (!AnimInstance)
+	{
+		return;
+	}
+
+	const bool bIsGrabbed = AnimInstance->HasGrabData();
+	if (bIsGrabbed)
+	{
+		AnimInstance->ResetTrickVector();
+	}				
 }
 
 void UCustomPawnMovementComponent::BeginPlay()
@@ -667,34 +713,6 @@ void UCustomPawnMovementComponent::ProcessForwardMovement(float DeltaTime, FQuat
 		}
 		AnimInstance->SetTilt(AITiltValue);
 
-		if (bIsPlayer)
-		{
-			//if (TimeSpentFalling > CacheGrabDataThreshold)
-			
-			if (GEngine)
-			{
-				GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Yellow, FString::Printf(TEXT("Dist: %.1f"), CurrentDistanceFromGround));					
-			}
-
-			if(CurrentDistanceFromGround > GroundDistRangeForGrabs || bJumping)
-			{
-				if ((bJumping || bFalling) && !bProcessTrick)
-				{
-					FTrickVector Copy(TrickData.TrickVector);
-					Copy.Y = 0.0f;
-					AnimInstance->SetTrickVector(Copy);
-					
-					if(Copy.X < 0.0f)
-						UE_LOG(LogTemp, Log, TEXT("Setting Grab Data: %.1f"), Copy.X);
-				}				
-			}
-			else
-			{
-				AnimInstance->ResetTrickVector();
-			}
-		}
-
-
 //#if defined DEBUG_SNOWBOARD_KIDS
 		if (GEngine && !bIsPlayer)
 		{
@@ -882,21 +900,32 @@ void UCustomPawnMovementComponent::ProcessDetectCollisions(float DeltaTime)
 		return;
 	}
 
+	// This is accomplished by taking the magnitude of the vector times the cosine of the vector's angle to find the horizontal component
+	// , and the magnitude of the vector times the sine of the vector's angle to find the vertical component
+	
 	FHitResult HitResult;
 	TArray<AActor*> ActorsToIgnore;
 	const FVector& OwnerLocation = Owner->GetActorLocation();
-	const FVector& Start = OwnerLocation;
+	const FVector& Start = OwnerLocation + FVector(0.0f, 0.0f, 10.0f);
 	const FVector& StartRight = OwnerLocation + FVector(0.0f, -15.0f, 0.0f);
 	const FVector& StartLeft = OwnerLocation + FVector(0.0f, 15.0f, 0.0f);
 	const FVector& ForwardVector = Owner->GetActorForwardVector();
+	FVector ActualForward = ForwardVector;
+	if (ActualForward.Z < 0.0f)
+	{
+		// Make it 2D if going down a slope, can follow the grain, going up slope.
+		// The difference is, we don't want to detect the floor as a collision when changing from a sharp incline.
+		ActualForward.Z = 0.0f;
+	}
+	
 	const FVector& RightVector = Owner->GetActorRightVector();
-	const FVector End = Start + (ForwardVector * CheckCollisionRayLength);
-	const FVector EndRight = StartRight + (ForwardVector * CheckCollisionRayLength);
-	const FVector EndLeft = StartLeft + (ForwardVector * CheckCollisionRayLength);
+	const FVector End = Start + (ActualForward * CheckCollisionRayLength);
+	const FVector EndRight = StartRight + (ActualForward * CheckCollisionRayLength);
+	const FVector EndLeft = StartLeft + (ActualForward * CheckCollisionRayLength);
 	AActor* OwnerChar = Cast<AActor>(Owner);
 	ActorsToIgnore.Add(OwnerChar);
 	const bool bHit = UKismetSystemLibrary::SphereTraceSingle(GetOuter(), Start, End, SphereCastRadius, ETraceTypeQuery::TraceTypeQuery2, true,
-		ActorsToIgnore, EDrawDebugTrace::None, HitResult, true);
+		ActorsToIgnore, EDrawDebugTrace::ForOneFrame, HitResult, true);
 
 	bool bPersistent = false;
 	float LifeTime = 1.0f;
@@ -989,6 +1018,11 @@ void UCustomPawnMovementComponent::ProcessMovement(float DeltaTime, FQuat Incomi
 		return;
 	}
 
+	if (GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Yellow, FString::Printf(TEXT("Dist: %.1f"), CurrentDistanceFromGround));
+	}
+
 	ProcessJump(DeltaTime);
 	ProcessGravity(DeltaTime);
 
@@ -1006,6 +1040,12 @@ void UCustomPawnMovementComponent::ProcessMovement(float DeltaTime, FQuat Incomi
 
 void UCustomPawnMovementComponent::TriggerJump()
 {
+	if (bIgnoreNextJumpRelease)
+	{
+		bIgnoreNextJumpRelease = false;
+		return;
+	}
+
 	APawn* Owner = GetPawnOwner();
 	if (!Owner)
 	{
@@ -1240,6 +1280,7 @@ void UCustomPawnMovementComponent::OnLanded()
 	if (AnimInstance)
 	{
 		bHasGrabData = AnimInstance->HasGrabData();
+		CancelGrab(ETrickDirection::Max);
 	}
 
 	if (bProcessTrick || bHasGrabData)
@@ -1330,14 +1371,19 @@ void UCustomPawnMovementComponent::RotateBoard(APawn& Owner, const float YValue)
 
 void UCustomPawnMovementComponent::TriggerCrash(const FRotator& UpdatedRotation)
 {
-	bCrashed = true;
-	CrashRot = UpdatedRotation;
-
 	APawn* Owner = GetPawnOwner();
 	if (!Owner)
 	{
 		return;
 	}
+
+	bCrashed = true;
+	CrashRot = UpdatedRotation;
+	if (bCharged || bCharging)
+	{
+		CancelCharge();
+		bIgnoreNextJumpRelease = true;
+	}	
 
 	USceneComponent* Root = Owner->GetRootComponent();
 	if (Root && bProcessTrick)

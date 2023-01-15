@@ -56,6 +56,30 @@ private:
 		void OnWestReleased();
 
 	UFUNCTION()
+		void OnDPadNorthPressed();
+
+	UFUNCTION()
+		void OnDPadNorthReleased();
+
+	UFUNCTION()
+		void OnDPadEastPressed();
+
+	UFUNCTION()
+		void OnDPadEastReleased();
+
+	UFUNCTION()
+		void OnDPadSouthPressed();
+
+	UFUNCTION()
+		void OnDPadSouthReleased();
+
+	UFUNCTION()
+		void OnDPadWestPressed();
+
+	UFUNCTION()
+		void OnDPadWestReleased();
+
+	UFUNCTION()
 	void MoveForward(float Value);
 
 	UFUNCTION()

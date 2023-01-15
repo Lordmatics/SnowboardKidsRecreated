@@ -33,10 +33,9 @@ public:
 
 	FORCEINLINE bool HasGrabData() const { return bHasGrabData; }
 	void ResetTrickVector();
-	void SetTrickVector(const FTrickVector& InTrickVector);
+	void SetTrickDirection(ETrickDirection Trick);
 
 private:
-	void SetTrickVectorInternal(ETrickDirection InTrickDirection);
 
 private:
 
@@ -60,4 +59,7 @@ private:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation", meta = (AllowPrivateAccess = "true"))
 	ETrickDirection CurrentTrickVector;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation", meta = (AllowPrivateAccess = "true"))
+	ETrickDirection CachedTrick;
 };

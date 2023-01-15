@@ -29,6 +29,15 @@ void ASnowboardPlayerController::SetupInputComponent()
 	InputComponent->BindAction("West", IE_Pressed, this, &ASnowboardPlayerController::OnWestPressed);
 	InputComponent->BindAction("West", IE_Released, this, &ASnowboardPlayerController::OnWestReleased);
 
+	InputComponent->BindAction("TrickUp", IE_Pressed, this, &ASnowboardPlayerController::OnDPadNorthPressed);
+	InputComponent->BindAction("TrickUp", IE_Released, this, &ASnowboardPlayerController::OnDPadNorthReleased);
+	InputComponent->BindAction("TrickRight", IE_Pressed, this, &ASnowboardPlayerController::OnDPadEastPressed);
+	InputComponent->BindAction("TrickRight", IE_Released, this, &ASnowboardPlayerController::OnDPadEastReleased);
+	InputComponent->BindAction("TrickDown", IE_Pressed, this, &ASnowboardPlayerController::OnDPadSouthPressed);
+	InputComponent->BindAction("TrickDown", IE_Released, this, &ASnowboardPlayerController::OnDPadSouthReleased);
+	InputComponent->BindAction("TrickLeft", IE_Pressed, this, &ASnowboardPlayerController::OnDPadWestPressed);
+	InputComponent->BindAction("TrickLeft", IE_Released, this, &ASnowboardPlayerController::OnDPadWestReleased);
+
 	InputComponent->BindAxis("MoveForward", this, &ASnowboardPlayerController::MoveForward);
 	InputComponent->BindAxis("MoveRight", this, &ASnowboardPlayerController::MoveRight);
 
@@ -141,6 +150,86 @@ void ASnowboardPlayerController::OnWestReleased()
 	}
 
 	PossessedPawn->OnWestReleased();
+}
+
+void ASnowboardPlayerController::OnDPadNorthPressed()
+{
+	if (!PossessedPawn)
+	{
+		return;
+	}
+
+	PossessedPawn->OnDPadNorthPressed();
+}
+
+void ASnowboardPlayerController::OnDPadNorthReleased()
+{
+	if (!PossessedPawn)
+	{
+		return;
+	}
+
+	PossessedPawn->OnDPadNorthReleased();
+}
+
+void ASnowboardPlayerController::OnDPadEastPressed()
+{
+	if (!PossessedPawn)
+	{
+		return;
+	}
+
+	PossessedPawn->OnDPadEastPressed();
+}
+
+void ASnowboardPlayerController::OnDPadEastReleased()
+{
+	if (!PossessedPawn)
+	{
+		return;
+	}
+
+	PossessedPawn->OnDPadEastReleased();
+}
+
+void ASnowboardPlayerController::OnDPadSouthPressed()
+{
+	if (!PossessedPawn)
+	{
+		return;
+	}
+
+	PossessedPawn->OnDPadSouthPressed();
+}
+
+void ASnowboardPlayerController::OnDPadSouthReleased()
+{
+	if (!PossessedPawn)
+	{
+		return;
+	}
+
+	PossessedPawn->OnDPadSouthReleased();
+}
+
+void ASnowboardPlayerController::OnDPadWestPressed()
+{
+	if (!PossessedPawn)
+	{
+		return;
+	}
+
+	PossessedPawn->OnDPadWestPressed();
+}
+
+void ASnowboardPlayerController::OnDPadWestReleased()
+{
+	if (!PossessedPawn)
+	{
+		return;
+	}
+
+	PossessedPawn->OnDPadWestReleased();
 }
 
 void ASnowboardPlayerController::MoveForward(float Value)
