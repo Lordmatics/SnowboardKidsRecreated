@@ -44,8 +44,8 @@ public:
 	ASnowboardCharacterBase(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 
 	FORCEINLINE UCapsuleComponent* GetCapsuleComponent() const { return CapsuleComponent; }
-	FORCEINLINE UCameraComponent* GetCamera() const { return ThirdPersonCamera; }
-	FORCEINLINE USpringArmComponent* GetSpringArm() const { return ThirdPersonSpringArm; }
+	//FORCEINLINE UCameraComponent* GetCamera() const { return ThirdPersonCamera; }
+	//FORCEINLINE USpringArmComponent* GetSpringArm() const { return ThirdPersonSpringArm; }
 	FORCEINLINE UStaticMeshComponent* GetSnowboard() const { return SnowboardMesh; }
 	FORCEINLINE const TArray<UMaterialInstanceDynamic*>& GetDynamicMaterials() const { return DynamicMaterials; }	
 	FORCEINLINE USkeletalMeshComponent* GetSkeletalMesh() const { return SkeletalMesh; }
@@ -110,11 +110,11 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Character", meta = (AllowPrivateAccess = "true"))
 		UCapsuleComponent* CapsuleComponent;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Character", meta = (AllowPrivateAccess = "true"))
-		UCameraComponent* ThirdPersonCamera;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Character", meta = (AllowPrivateAccess = "true"))
-		USpringArmComponent* ThirdPersonSpringArm;
+	//UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Character", meta = (AllowPrivateAccess = "true"))
+	//	UCameraComponent* ThirdPersonCamera;
+	//
+	//UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Character", meta = (AllowPrivateAccess = "true"))
+	//	USpringArmComponent* ThirdPersonSpringArm;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Character", meta = (AllowPrivateAccess = "true"))
 		UStaticMeshComponent* SnowboardMesh;

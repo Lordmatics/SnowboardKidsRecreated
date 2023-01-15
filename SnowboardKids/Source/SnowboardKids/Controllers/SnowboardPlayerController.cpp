@@ -3,6 +3,8 @@
 
 #include "SnowboardKids/Controllers/SnowboardPlayerController.h"
 #include "../CustomCharacters/SnowboardCharacterBase.h"
+#include "../CustomCameras/SnowboardPlayerCamera.h"
+#include <Kismet/GameplayStatics.h>
 
 ASnowboardPlayerController::ASnowboardPlayerController() :
 	PossessedPawn(nullptr),
@@ -50,11 +52,29 @@ void ASnowboardPlayerController::SetupInputComponent()
 	InputComponent->BindAxis("LookUpRate", this, &ASnowboardPlayerController::LookUpAtRate);
 }
 
+void ASnowboardPlayerController::ConstrainYawToPlayer(bool Value)
+{
+	if (PlayerCamera)
+	{
+		PlayerCamera->ConstrainYawToPlayer(Value);
+	}
+}
+
 void ASnowboardPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
 	
 	PossessedPawn = Cast<ASnowboardCharacterBase>(GetPawn());
+	
+	if (ASnowboardPlayerCamera* Camera = Cast<ASnowboardPlayerCamera>(UGameplayStatics::GetActorOfClass(this, CameraClass)))
+	{
+		PlayerCamera = Camera;
+		
+		if (PossessedPawn)
+		{
+			Camera->UpdateCamera(*PossessedPawn);
+		}		
+	}
 }
 
 void ASnowboardPlayerController::Tick(float DeltaSeconds)
@@ -70,6 +90,33 @@ void ASnowboardPlayerController::Tick(float DeltaSeconds)
 	{
 		PossessedPawn = Cast<ASnowboardCharacterBase>(GetPawn());
 	}
+}
+
+void ASnowboardPlayerController::PlayerTick(float DeltaTime)
+{
+	Super::PlayerTick(DeltaTime);
+
+	ProcessCamera(DeltaTime);
+}
+
+void ASnowboardPlayerController::ProcessCamera(float DeltaTime)
+{
+	ASnowboardPlayerCamera* Camera = PlayerCamera;
+	if (!PlayerCamera)
+	{
+		return;
+	}
+
+	ASnowboardCharacterBase* PossessedPlayer = PossessedPawn;
+	if (!PossessedPlayer)
+	{
+		return;
+	}
+
+
+	AActor* ViewTarget = GetViewTarget();
+
+	Camera->UpdateCamera(*PossessedPlayer);
 }
 
 void ASnowboardPlayerController::OnNorthPressed()

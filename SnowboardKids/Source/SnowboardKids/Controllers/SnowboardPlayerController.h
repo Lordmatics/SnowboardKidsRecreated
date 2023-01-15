@@ -7,6 +7,7 @@
 #include "SnowboardPlayerController.generated.h"
 
 class ASnowboardCharacterBase;
+class ASnowboardPlayerCamera;
 
 /**
  * 
@@ -25,10 +26,17 @@ public:
 	
 	virtual void SetupInputComponent();
 
+	void ConstrainYawToPlayer(bool Value);
+
 protected:
 
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaSeconds) override;
+	virtual void PlayerTick(float DeltaTime) override;
+
+private:
+
+	void ProcessCamera(float DeltaTime);
 
 private:
 	UFUNCTION()
@@ -99,8 +107,14 @@ private:
 
 private:
 
+	UPROPERTY(EditAnywhere, Category = "Camera")
+	TSubclassOf<ASnowboardPlayerCamera> CameraClass;
+
 	UPROPERTY(Transient)
 	ASnowboardCharacterBase* PossessedPawn;
+
+	UPROPERTY(Transient)
+	ASnowboardPlayerCamera* PlayerCamera;
 
 	bool bRotationDisabled;
 };

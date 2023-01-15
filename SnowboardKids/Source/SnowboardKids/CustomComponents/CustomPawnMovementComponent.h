@@ -8,7 +8,6 @@
 #include "../Data/TrickData.h"
 #include "CustomPawnMovementComponent.generated.h"
 
-class UCameraComponent;
 class USnowboarderAnimInstance;
 class UAnimMontage;
 
@@ -69,6 +68,8 @@ private:
 	void RotateBoard(APawn& Owner, const float YValue);
 	void TriggerCrash(const FRotator& UpdatedRotation);
 	FRotator OrientRotationToFloor(FQuat IncomingQuat, APawn& Owner, const FVector& DeltaVec, const float YValue, float& PitchResult);
+
+	void SetProcessTrick(bool Value);
 
 public:
 	
@@ -199,9 +200,6 @@ public:
 
 	//UPROPERTY(EditAnywhere, Category = "Movement", meta = (ClampMin = 0.0, ClampMax = 1.0))
 	//float TurnLimit;
-
-	UPROPERTY(Transient)
-	UCameraComponent* Camera;
 
 	UPROPERTY(Transient)
 	USnowboarderAnimInstance* AnimInstance;

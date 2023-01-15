@@ -3,12 +3,12 @@
 
 #include "SnowboardKids/CustomComponents/CustomPawnMovementComponent.h"
 #include "../CustomCharacters/SnowboardCharacterBase.h"
-#include <Camera/CameraComponent.h>
 #include <Kismet/KismetMathLibrary.h>
 #include <DrawDebugHelpers.h>
 #include "../Animation/SnowboarderAnimInstance.h"
 #include <Kismet/KismetSystemLibrary.h>
 #include <Animation/AnimMontage.h>
+#include "../Controllers/SnowboardPlayerController.h"
 
 	//auto map = [](float val, float valmin, float valmax, float desiredmin, float desiredmax) -> float
 	//{
@@ -203,7 +203,7 @@ bool UCustomPawnMovementComponent::ProcessCrashed(float DeltaTime, FQuat Incomin
 	}
 
 	APawn* Owner = GetPawnOwner();
-	if (!Owner || !Camera)
+	if (!Owner)
 	{
 		CrashTimer = 0.0f;
 		bCrashed = false;
@@ -211,7 +211,6 @@ bool UCustomPawnMovementComponent::ProcessCrashed(float DeltaTime, FQuat Incomin
 	}
 
 	const FVector& OwnerLocation = Owner->GetActorLocation();
-	const FVector& CamFoward = Camera->GetForwardVector();
 	const FVector& OwnerForward = Owner->GetActorForwardVector();
 
 	// Create matrix relative to current state
@@ -268,15 +267,21 @@ bool UCustomPawnMovementComponent::ProcessCrashed(float DeltaTime, FQuat Incomin
 
 void UCustomPawnMovementComponent::ProcessJump(float DeltaTime)
 {
-	if (!bJumping)
+	if (!bJumping || bFalling)
 	{
 		return;
 	}
 
 	JumpTimer += DeltaTime;
-	if (JumpTimer >= JumpApexTime)
+	const float LocalApexTime = bChargedJumping ? JumpApexTime * 1.2f : JumpApexTime;
+	if (JumpTimer >= LocalApexTime)
 	{
-		const float CumulativeHangTime = JumpApexTime + AirTime;
+		float CumulativeHangTime = JumpApexTime + AirTime;
+		if (bChargedJumping)
+		{
+			CumulativeHangTime *= 1.2f;
+		}
+
 		if (JumpTimer >= CumulativeHangTime)
 		{
 			CancelJump();
@@ -298,8 +303,8 @@ void UCustomPawnMovementComponent::ProcessJump(float DeltaTime)
 	float ChargedJumpFactorForward = 1;
 	if (bChargedJumping)
 	{
-		ChargedJumpFactorVertical = 1.33f;
-		ChargedJumpFactorForward = 5.0f;
+		ChargedJumpFactorVertical = 0.75f;
+		ChargedJumpFactorForward = 6.75f;
 	}
 
 	// Add Vertical movement - and a bit of forward movement.
@@ -309,8 +314,9 @@ void UCustomPawnMovementComponent::ProcessJump(float DeltaTime)
 	// Only add forward movement, if we're not at max speed.
 	//if (BoardData.ForwardSpeed <= BoardData.MaxSpeed)
 	{
-		FVector ForwardVector(OwnerForward);
+		FVector ForwardVector(OwnerForward);		
 		ForwardVector *= BoardData.JumpForwardScale * ChargedJumpFactorForward * DeltaTime;
+		ForwardVector.Z = 0.0f;
 		JmpVec += ForwardVector;
 	}
 	
@@ -385,7 +391,7 @@ void UCustomPawnMovementComponent::ProcessForwardRoll(APawn& Owner, float DeltaT
 
 	if (LerpValue >= 1.0f)//TrickData.TrickTimer >= TrickData.TimeForTrick)
 	{
-		bProcessTrick = false;
+		SetProcessTrick(false);		
 		TrickData.OnTrickPerformed(ETrickDirection::East);
 		TrickData.ResetTrickData();
 	}
@@ -408,7 +414,7 @@ void UCustomPawnMovementComponent::ProcessRightRoll(APawn& Owner, float DeltaTim
 
 	if (LerpValue >= 1.0f)//TrickData.TrickTimer >= TrickData.TimeForTrick)
 	{
-		bProcessTrick = false;
+		SetProcessTrick(false);
 		TrickData.OnTrickPerformed(ETrickDirection::East);
 		TrickData.ResetTrickData();
 	}
@@ -431,7 +437,7 @@ void UCustomPawnMovementComponent::ProcessBackwardsRoll(APawn& Owner, float Delt
 
 	if (LerpValue >= 1.0f)//TrickData.TrickTimer >= TrickData.TimeForTrick)
 	{
-		bProcessTrick = false;
+		SetProcessTrick(false);
 		TrickData.OnTrickPerformed(ETrickDirection::East);
 		TrickData.ResetTrickData();
 	}
@@ -454,7 +460,7 @@ void UCustomPawnMovementComponent::ProcessLeftRoll(APawn& Owner, float DeltaTime
 
 	if (LerpValue >= 1.0f)//TrickData.TrickTimer >= TrickData.TimeForTrick)
 	{
-		bProcessTrick = false;
+		SetProcessTrick(false);
 		TrickData.OnTrickPerformed(ETrickDirection::East);
 		TrickData.ResetTrickData();
 	}
@@ -504,8 +510,25 @@ void UCustomPawnMovementComponent::ProcessGravity(float DeltaTime)
 		//}
 		//else
 		{
+
+			float ChargedJumpFactorVertical = 1.0f;
+			if (bChargedJumping)
+			{
+				ChargedJumpFactorVertical = 1.33f;
+			}
+
 			FVector GravityVec(FVector::DownVector);
-			GravityVec *= BoardData.GravityScale * DeltaTime;
+			GravityVec *= BoardData.GravityScale * DeltaTime * ChargedJumpFactorVertical;
+
+			//APawn* Owner = GetPawnOwner();
+			//if (bChargedJumping && Owner)
+			//{
+			//	float ChargedJumpFactorForward = 5.0f;
+			//	const FVector& OwnerForward = Owner->GetActorForwardVector();
+			//	FVector ForwardVector(OwnerForward);
+			//	ForwardVector *= BoardData.JumpForwardScale * ChargedJumpFactorForward * DeltaTime;
+			//	GravityVec += ForwardVector;
+			//}
 
 			bMatchRotToImpactNormal = false;
 			//SetPlaneConstraintEnabled(false);
@@ -612,13 +635,12 @@ void UCustomPawnMovementComponent::ProcessCharging(float DeltaTime)
 void UCustomPawnMovementComponent::ProcessForwardMovement(float DeltaTime, FQuat IncomingQuat)
 {
 	APawn* Owner = GetPawnOwner();
-	if (!Owner || !Camera)
+	if (!Owner)
 	{
 		return;
 	}
 	
 	const FVector& OwnerLocation = Owner->GetActorLocation();
-	const FVector& CamFoward = Camera->GetForwardVector();
 	const FVector& RightVec = Owner->GetActorRightVector();
 	const FVector& OwnerForward = bProcessTrick ? CachedForwardVector : Owner->GetActorForwardVector();
 
@@ -1052,7 +1074,7 @@ void UCustomPawnMovementComponent::TriggerJump()
 		return;
 	}
 
-	if (bJumping || bFalling)
+	if (bJumping || bFalling || bChargedJumping)
 	{
 		return;
 	}
@@ -1076,7 +1098,7 @@ void UCustomPawnMovementComponent::TriggerJump()
 	if (TrickData.IsTrickBufferred())
 	{
 		TrickData.UpdateCache();
-		bProcessTrick = true;
+		SetProcessTrick(true);
 		CachedForwardVector = Owner->GetActorForwardVector();
 		CachedRotationForTrick = Owner->GetRootComponent()->GetComponentRotation();
 		//UE_LOG(LogTemp, Log, TEXT("Cached Roll: %.1f"), CachedRotationForTrick.Roll);
@@ -1090,7 +1112,7 @@ void UCustomPawnMovementComponent::TriggerJump()
 void UCustomPawnMovementComponent::CancelJump()
 {
 	bJumping = false;
-	bChargedJumping = false;
+	//bChargedJumping = false;
 	JumpTimer = 0.0f;
 }
 
@@ -1274,6 +1296,7 @@ void UCustomPawnMovementComponent::OnLanded()
 	ConstrainToPlaneNormal(true);
 	bFalling = false;
 	DelayGravityTimer = 0.0f;
+	bChargedJumping = false;
 
 	// Fall over if we hit the floor whilst mid trick.
 	bool bHasGrabData = false;
@@ -1295,15 +1318,7 @@ bool UCustomPawnMovementComponent::ValidateOwnerComponents()
 	if (!Owner)
 	{
 		return false;
-	}
-
-	if (!Camera)
-	{
-		if (const ASnowboardCharacterBase* SnowboardBase = Cast<ASnowboardCharacterBase>(Owner))
-		{
-			Camera = SnowboardBase->GetCamera();
-		}
-	}
+	}	
 
 	if (!AnimInstance)
 	{
@@ -1313,7 +1328,7 @@ bool UCustomPawnMovementComponent::ValidateOwnerComponents()
 		}
 	}
 
-	if (!Camera || !AnimInstance)
+	if (!AnimInstance)
 	{
 		return false;
 	}
@@ -1419,7 +1434,7 @@ void UCustomPawnMovementComponent::TriggerCrash(const FRotator& UpdatedRotation)
 	}
 
 	TrickData.ResetTrickData();
-	bProcessTrick = false;
+	SetProcessTrick(false);
 }
 
 FRotator UCustomPawnMovementComponent::OrientRotationToFloor(FQuat IncomingQuat, APawn& Owner, const FVector& DeltaVec, const float YValue, float& PitchResult)
@@ -1539,4 +1554,24 @@ FRotator UCustomPawnMovementComponent::OrientRotationToFloor(FQuat IncomingQuat,
 	// Need to enforce this so we can freely turn.
 
 	return UpdatedRotation;
+}
+
+void UCustomPawnMovementComponent::SetProcessTrick(bool Value)
+{
+	bProcessTrick = Value;
+	// Notify Camera whether it should inherit Yaw or not.
+	if (bIsPlayer)
+	{
+		// Grab Player Camera.
+		APawn* Owner = GetPawnOwner();
+		ASnowboardCharacterBase* SnowboardPlayer = Cast<ASnowboardCharacterBase>(Owner);
+		if (SnowboardPlayer)
+		{
+			ASnowboardPlayerController* PlayerController = Cast<ASnowboardPlayerController>(SnowboardPlayer->GetController());
+			if (PlayerController)
+			{
+				PlayerController->ConstrainYawToPlayer(!Value);
+			}
+		}
+	}
 }

@@ -68,15 +68,15 @@ ASnowboardCharacterBase::ASnowboardCharacterBase(const FObjectInitializer& Objec
 	SkeletalMesh->SetCanEverAffectNavigation(false);
 	SkeletalMesh->SetRelativeLocation(FVector(0.0f, 0.0f, -45.0f), false);
 	
-	ThirdPersonSpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
-	ThirdPersonSpringArm->SetupAttachment(RootComponent);
-	ThirdPersonSpringArm->TargetArmLength = 300.0f;
-	ThirdPersonSpringArm->bUsePawnControlRotation = true;
-	ThirdPersonSpringArm->SetRelativeLocation(FVector(0.0f, 0.0f, 43.0f), false);
-
-	ThirdPersonCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
-	ThirdPersonCamera->SetupAttachment(ThirdPersonSpringArm, USpringArmComponent::SocketName);
-	ThirdPersonCamera->bUsePawnControlRotation = false;
+	//ThirdPersonSpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
+	//ThirdPersonSpringArm->SetupAttachment(RootComponent);
+	//ThirdPersonSpringArm->TargetArmLength = 300.0f;
+	//ThirdPersonSpringArm->bUsePawnControlRotation = true;
+	//ThirdPersonSpringArm->SetRelativeLocation(FVector(0.0f, 0.0f, 43.0f), false);
+	//
+	//ThirdPersonCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
+	//ThirdPersonCamera->SetupAttachment(ThirdPersonSpringArm, USpringArmComponent::SocketName);
+	//ThirdPersonCamera->bUsePawnControlRotation = false;
 	
 	SnowboardMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("SnowboardMesh"));
 	//SnowboardMesh->AttachToComponent(SkeletalMesh, FAttachmentTransformRules::SnapToTargetNotIncludingScale, SocketNames::FootSocket);
