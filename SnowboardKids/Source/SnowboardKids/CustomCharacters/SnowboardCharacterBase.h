@@ -6,6 +6,7 @@
 #include "GameFramework/Pawn.h"
 #include "SnowboardKids/Interfaces/CharacterInterface.h"
 #include "../Data/BoardData.h"
+#include "../CustomActors/Projectiles/ProjectileBase.h"
 #include "SnowboardCharacterBase.generated.h"
 
 class USpringArmComponent;
@@ -15,6 +16,8 @@ class UMaterialInstanceDynamic;
 class UCapsuleComponent;
 class USnowboarderAnimInstance;
 class UAnimMontage;
+class AProjectileBase;
+class UDataTable;
 //class UCustomCharacterMovementComponent;
 class USkeletalMeshComponent;
 class UPawnMovementComponent;
@@ -59,8 +62,11 @@ public:
 
 	void PlayAnimation(UAnimMontage* Montage);
 
-	// Inputs
+	void OnHitByProjectile(EProjectileType ProjectileType);
 
+	// Inputs
+	void OnRightTriggerPressed();
+	void OnRightTriggerReleased();
 	void OnNorthPressed();
 	void OnNorthReleased();
 	void OnEastPressed();
@@ -98,8 +104,12 @@ public:
 
 	void SetController(AController* InController);
 
+	bool IsTargetable() const;
+
 private:
 	virtual void BeginPlay() override;	
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
 	virtual void Tick(float DeltaTime) override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	virtual UPawnMovementComponent* GetMovementComponent() const override;
@@ -145,4 +155,8 @@ private:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character", meta = (AllowPrivateAccess = "true"))
 		FBoardMeshes BoardMeshes;
+
+	// TODO: Change this to a data table, where we can map the projectile type - bp asset that corresponds to it.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character", meta = (AllowPrivateAccess = "true"))
+		UDataTable* ProjectileTable;
 };

@@ -62,7 +62,7 @@ ETrickDirection FTrickData::GetTrickFromCache() const
 {
 	const float X = CachedTrickVector[0];
 	const float Y = CachedTrickVector[1];
-	ETrickDirection Trick;
+	ETrickDirection Trick = ETrickDirection::West;
 	if (X > 0.75f)
 	{
 		// Forward Roll

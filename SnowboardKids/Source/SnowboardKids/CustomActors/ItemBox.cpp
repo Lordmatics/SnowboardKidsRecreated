@@ -9,11 +9,11 @@
 // Sets default values
 AItemBox::AItemBox() :
 	ItemBoxType(EItemBoxType::Red),
-	bTriggered(false),
-	YawRot(100.0f),
+	YawRot(100.0f),	
 	HitYawRot(-250.0f),
 	MinVariance(10.0f),
-	MaxVariance(30.0f)
+	MaxVariance(30.0f),
+	bTriggered(false)
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;

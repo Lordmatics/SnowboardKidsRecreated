@@ -17,6 +17,9 @@
 #include <Animation/AnimMontage.h>
 #include "../Controllers/SnowboardAIController.h"
 #include <DrawDebugHelpers.h>
+#include "../CustomActors/Projectiles/ProjectileTable.h"
+#include "../Utils/GameUtils.h"
+#include "../Systems/WorldSystems/SnowboardCharacterSubsystem.h"
 
 // Sets default values
 ASnowboardCharacterBase::ASnowboardCharacterBase(const FObjectInitializer& ObjectInitializer) :
@@ -26,7 +29,8 @@ ASnowboardCharacterBase::ASnowboardCharacterBase(const FObjectInitializer& Objec
 	bMovementDisabled(false),
 	bRotationDisabled(false),
 	bIsAIControlled(false),
-	BoardMeshes()
+	BoardMeshes(),
+	ProjectileTable(nullptr)
 {
  	// Set this pawn to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;	
@@ -130,18 +134,27 @@ void ASnowboardCharacterBase::PlayAnimation(UAnimMontage* Montage)
 	AnimInstance->Montage_Play(Montage);
 }
 
+void ASnowboardCharacterBase::OnHitByProjectile(EProjectileType ProjectileType)
+{
+	UE_LOG(LogTemp, Log, TEXT("%s Hit By Projectile!"), *GetName());
+
+	UCapsuleComponent* Capsule = GetCapsuleComponent();
+	if (CharacterMovement && Capsule)
+	{
+		if (!CharacterMovement->HasCrashed())
+		{
+			const FRotator& Rotation = Capsule->GetComponentRotation();
+			CharacterMovement->SetProcessTrick(true);
+			CharacterMovement->TriggerCrash(Rotation);
+		}		
+	}
+}
+
 // Called when the game starts or when spawned
 void ASnowboardCharacterBase::BeginPlay()
 {
 	Super::BeginPlay();
 	
-
-	auto Control = GetController();
-
-	auto CastControl = Cast<ASnowboardAIController>(GetController());
-
-	auto SecondCast = GetController<ASnowboardAIController>();
-
 	if (DynamicMaterials.Num() > 0)
 	{
 		DynamicMaterials.Empty();
@@ -153,7 +166,7 @@ void ASnowboardCharacterBase::BeginPlay()
 	}
 
 	if (SnowboardMesh)
-	{//	SnowboardMesh->SetupAttachment(SkeletalMesh, SocketNames::FootSocket);
+	{
 		SnowboardMesh->AttachToComponent(SkeletalMesh, FAttachmentTransformRules::SnapToTargetNotIncludingScale, SocketNames::FootSocket);
 	}
 	const TArray<UMaterialInterface*>& Materials = SkeletalMesh->GetMaterials();
@@ -174,27 +187,26 @@ void ASnowboardCharacterBase::BeginPlay()
 		++Index;
 	}
 
-	//if (UCharacterMovementComponent* CharacterMovementComp = GetCharacterMovement())
-	//{
-	//	CharacterMovementComp->MaxWalkSpeed = RunSpeed;
-	//	const float GravityScale = CharacterMovementComp->GravityScale;
-	//	InitialGravityScale = GravityScale;
+	if (USnowboardCharacterSubsystem* SnowboardCharacterSystem = USnowboardCharacterSubsystem::GetCharacterSystem(GetWorld()))
+	{
+		SnowboardCharacterSystem->RegisterCharacter(this);
+	}
+}
 
-	//	const float JumpVel = CharacterMovementComp->JumpZVelocity;
-	//	CharacterMovementComp->JumpZVelocity = JumpVel * GravityScale * 1.33f;
-	//	InitialJumpVelocity = JumpVel * GravityScale * 1.33f;
-	//}
+void ASnowboardCharacterBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	Super::EndPlay(EndPlayReason);
+
+	if (USnowboardCharacterSubsystem* SnowboardCharacterSystem = USnowboardCharacterSubsystem::GetCharacterSystem(GetWorld()))
+	{
+		SnowboardCharacterSystem->UnRegisterCharacter(this);
+	}
 }
 
 // Called every frame
 void ASnowboardCharacterBase::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
-	//if (!IsAIControlled())
-	//{
-	//	return;
-	//}
 
 	if (UCustomPawnMovementComponent* CharacterMovementComponent = GetCharacterMovement())
 	{
@@ -248,6 +260,16 @@ void ASnowboardCharacterBase::UnPossessed()
 
 }
 
+void ASnowboardCharacterBase::OnRightTriggerPressed()
+{
+	const bool bItemShot = ConsumeItemOffensive();
+}
+
+void ASnowboardCharacterBase::OnRightTriggerReleased()
+{
+
+}
+
 void ASnowboardCharacterBase::OnNorthPressed()
 {
 	if (UCustomPawnMovementComponent* CharacterMovementComponent = GetCharacterMovement())
@@ -290,7 +312,7 @@ void ASnowboardCharacterBase::OnSouthReleased()
 
 void ASnowboardCharacterBase::OnWestPressed()
 {
-
+	const bool bItemUsed = ConsumeItemUtility();
 }
 
 void ASnowboardCharacterBase::OnWestReleased()
@@ -475,6 +497,42 @@ void ASnowboardCharacterBase::LookUpAtRate(float Rate)
 
 bool ASnowboardCharacterBase::ConsumeItemOffensive()
 {
+	UE_LOG(LogTemp, Log, TEXT("ConsumeItemOffensive"));
+	if (ProjectileTable)
+	{
+		FName RowName;
+		GameUtils::EnumString(EProjectileType::Hands, RowName);		
+
+		FString ContextString = FString::Printf(TEXT("%s"), ANSI_TO_TCHAR(__FUNCTION__));
+		FProjectileTableRow* FoundRow = ProjectileTable->FindRow<FProjectileTableRow>(RowName, ContextString, false);
+		if (!FoundRow)
+		{
+			UE_LOG(LogTemp, Log, TEXT("No Row Found with name: %s"), *RowName.ToString());
+			return false;
+		}
+
+		const TSubclassOf<AProjectileBase>& ProjectileClassToInstantiate = FoundRow->ProjectileClass;
+		UWorld* World = GetWorld();
+		if (!World)
+		{
+			UE_LOG(LogTemp, Log, TEXT("No World Found with Row Name: %s"), *RowName.ToString());
+			return false;
+		}
+
+		const FVector& OwnerLocation = GetActorLocation();
+		const FVector& ForwardVector = GetActorForwardVector();
+		FVector SpawnLocation = OwnerLocation + (ForwardVector * 100.0f); // Just in front of us.
+		FRotator SpawnRotation = GetActorRotation();
+		FActorSpawnParameters SpawnParameters;
+		SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		AProjectileBase* SpawnedProjectile = World->SpawnActor<AProjectileBase>(ProjectileClassToInstantiate, SpawnLocation, SpawnRotation, SpawnParameters);
+		if (SpawnedProjectile)
+		{
+			// Deduct ammo ?
+			SpawnedProjectile->SetShooter(this);
+			return true;
+		}
+	}
 	return false;
 }
 
@@ -486,4 +544,13 @@ bool ASnowboardCharacterBase::ConsumeItemUtility()
 void ASnowboardCharacterBase::SetController(AController* InController)
 {
 	Controller = InController;	
+}
+
+bool ASnowboardCharacterBase::IsTargetable() const
+{
+	if (CharacterMovement)
+	{
+		return !CharacterMovement->HasCrashed();
+	}
+	return true;
 }

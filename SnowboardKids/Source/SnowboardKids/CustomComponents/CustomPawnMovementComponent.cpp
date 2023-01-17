@@ -10,17 +10,6 @@
 #include <Animation/AnimMontage.h>
 #include "../Controllers/SnowboardPlayerController.h"
 
-	//auto map = [](float val, float valmin, float valmax, float desiredmin, float desiredmax) -> float
-	//{
-	//	const float denominator = valmax - valmin;
-	//	if (denominator == 0.0f)
-	//	{
-	//		return val;
-	//	}
-	//	float ratio = (desiredmax - desiredmin) / denominator;
-	//	return desiredmin + ratio * (val - valmin);
-	//};
-
 UCustomPawnMovementComponent::UCustomPawnMovementComponent() :
 	CrashMontage(nullptr),
 	TrickFailMontage(nullptr),
@@ -392,7 +381,7 @@ void UCustomPawnMovementComponent::ProcessForwardRoll(APawn& Owner, float DeltaT
 	if (LerpValue >= 1.0f)//TrickData.TrickTimer >= TrickData.TimeForTrick)
 	{
 		SetProcessTrick(false);		
-		TrickData.OnTrickPerformed(ETrickDirection::East);
+		TrickData.OnTrickPerformed(ETrickDirection::North);
 		TrickData.ResetTrickData();
 	}
 }
@@ -438,7 +427,7 @@ void UCustomPawnMovementComponent::ProcessBackwardsRoll(APawn& Owner, float Delt
 	if (LerpValue >= 1.0f)//TrickData.TrickTimer >= TrickData.TimeForTrick)
 	{
 		SetProcessTrick(false);
-		TrickData.OnTrickPerformed(ETrickDirection::East);
+		TrickData.OnTrickPerformed(ETrickDirection::South);
 		TrickData.ResetTrickData();
 	}
 }
@@ -461,29 +450,29 @@ void UCustomPawnMovementComponent::ProcessLeftRoll(APawn& Owner, float DeltaTime
 	if (LerpValue >= 1.0f)//TrickData.TrickTimer >= TrickData.TimeForTrick)
 	{
 		SetProcessTrick(false);
-		TrickData.OnTrickPerformed(ETrickDirection::East);
+		TrickData.OnTrickPerformed(ETrickDirection::West);
 		TrickData.ResetTrickData();
 	}
 }
 
 void UCustomPawnMovementComponent::ProcessDiagonalNE(APawn& Owner, float DeltaTime)
 {
-
+	ProcessForwardRoll(Owner, DeltaTime);
 }
 
 void UCustomPawnMovementComponent::ProcessDiagonalSE(APawn& Owner, float DeltaTime)
 {
-
+	ProcessBackwardsRoll(Owner, DeltaTime);
 }
 
 void UCustomPawnMovementComponent::ProcessDiagonalSW(APawn& Owner, float DeltaTime)
 {
-
+	ProcessBackwardsRoll(Owner, DeltaTime);
 }
 
 void UCustomPawnMovementComponent::ProcessDiagonalNW(APawn& Owner, float DeltaTime)
 {
-
+	ProcessForwardRoll(Owner, DeltaTime);
 }
 
 void UCustomPawnMovementComponent::ProcessGravity(float DeltaTime)

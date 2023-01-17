@@ -19,6 +19,9 @@ void ASnowboardPlayerController::SetupInputComponent()
 	
 	check(InputComponent);
 
+	InputComponent->BindAction("RightTrigger", IE_Pressed, this, &ASnowboardPlayerController::OnRightTriggerPressed);
+	InputComponent->BindAction("RightTrigger", IE_Released, this, &ASnowboardPlayerController::OnRightTriggerReleased);
+
 	InputComponent->BindAction("North", IE_Pressed, this, &ASnowboardPlayerController::OnNorthPressed);
 	InputComponent->BindAction("North", IE_Released, this, &ASnowboardPlayerController::OnNorthReleased);
 
@@ -119,6 +122,27 @@ void ASnowboardPlayerController::ProcessCamera(float DeltaTime)
 	Camera->UpdateCamera(*PossessedPlayer);
 }
 
+void ASnowboardPlayerController::OnRightTriggerPressed()
+{
+	if (!PossessedPawn)
+	{
+		return;
+	}
+
+	// Offensive Item.
+	PossessedPawn->OnRightTriggerPressed();
+}
+
+void ASnowboardPlayerController::OnRightTriggerReleased()
+{
+	if (!PossessedPawn)
+	{
+		return;
+	}
+
+	PossessedPawn->OnRightTriggerReleased();
+}
+
 void ASnowboardPlayerController::OnNorthPressed()
 {
 	if (!PossessedPawn)
@@ -187,6 +211,8 @@ void ASnowboardPlayerController::OnWestPressed()
 	}
 
 	PossessedPawn->OnWestPressed();
+
+	// Utility Item.
 }
 
 void ASnowboardPlayerController::OnWestReleased()

@@ -66,10 +66,8 @@ private:
 	void SetGravityVector(const FVector& Gravity);
 	FVector ConsumeGravityVector();
 	void RotateBoard(APawn& Owner, const float YValue);
-	void TriggerCrash(const FRotator& UpdatedRotation);
 	FRotator OrientRotationToFloor(FQuat IncomingQuat, APawn& Owner, const FVector& DeltaVec, const float YValue, float& PitchResult);
 
-	void SetProcessTrick(bool Value);
 
 public:
 	
@@ -79,6 +77,9 @@ public:
 	void TriggerCharge();
 	void CancelCharge();
 
+	void SetProcessTrick(bool Value);
+	void TriggerCrash(const FRotator& UpdatedRotation);
+	FORCEINLINE bool HasCrashed() const { return bCrashed; }
 	/*
 	* At what rate should we move forward.
 	*/

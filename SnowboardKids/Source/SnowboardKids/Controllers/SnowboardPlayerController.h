@@ -40,6 +40,12 @@ private:
 
 private:
 	UFUNCTION()
+		void OnRightTriggerPressed();
+	
+	UFUNCTION()
+		void OnRightTriggerReleased();
+
+	UFUNCTION()
 		void OnNorthPressed();
 
 	UFUNCTION()
