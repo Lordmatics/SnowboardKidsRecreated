@@ -68,22 +68,10 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Projectile")
 	EProjectileType ProjectileType;
 
+	FVector ProjectileVelocity;
+
 	UPROPERTY(EditAnywhere, Category = "Projectile")
 	float ProjectileSpeed;
-
-	UPROPERTY(EditAnywhere, Category = "Projectile")
-	float ProjectileSeekSpeed;
-
-	UPROPERTY(EditAnywhere, Category = "Projectile")
-	float MaxSeekSpeed;
-
-	UPROPERTY(EditAnywhere, Category = "Projectile")
-	float SeekIncrementWhilstLocked;
-
-	UPROPERTY(EditAnywhere, Category = "Projectile")
-	float RangeToAccelerateSeek;
-
-	float InitialSeekSpeed;
 
 	UPROPERTY(EditAnywhere, Category = "Projectile")
 	float ProjectileGravity;

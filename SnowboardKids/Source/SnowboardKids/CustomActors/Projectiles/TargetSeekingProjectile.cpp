@@ -5,111 +5,89 @@
 #include "SnowboardKids/CustomCharacters/SnowboardCharacterBase.h"
 #include <Kismet/KismetMathLibrary.h>
 #include "SnowboardKids/Systems/WorldSystems/SnowboardCharacterSubsystem.h"
+#include "SnowboardKids/Utils/GameUtils.h"
 
 ATargetSeekingProjectile::ATargetSeekingProjectile() :
 	Super(),
 	LockedTarget(nullptr),
-	SeekRange(2550.0f) // 2750.0f sort of works
+	SeekForwardRange(850.0f),
+	SeekSideRange(425.0f),
+	ProjectileSeekSpeed(600.0f),
+	bTargetLost(false)
 {
 
 }
 
 void ATargetSeekingProjectile::ProcessMovement(float DeltaTime)
 {
+	ProcessSeek(DeltaTime);
+}
+
+void ATargetSeekingProjectile::BeginPlay()
+{
+	Super::BeginPlay();	
+}
+
+void ATargetSeekingProjectile::ProcessSeek(float DeltaTime)
+{
 	// Continuously Move Forward.
-	const FVector& ProjectileLocation = GetActorLocation();
+	FVector ProjectileLocation = GetActorLocation();
 
 	// Seek Target
 	if (!LockedTarget && Shooter)
 	{
 		if (USnowboardCharacterSubsystem* SnowboardCharacterSystem = USnowboardCharacterSubsystem::GetCharacterSystem(GetWorld()))
 		{
-			LockedTarget = SnowboardCharacterSystem->FindClosestCharacterWithinRange(*Shooter, *this, SeekRange);
+			LockedTarget = SnowboardCharacterSystem->FindClosestCharacterWithinRange(*Shooter, *this, SeekForwardRange, SeekSideRange);
+			bTargetLost = false;
 		}
 	}
 
-	FRotator NewRotation = GetActorRotation();
-	bool bUpdateRotation = false;
 	const FVector& ForwardVector = GetActorForwardVector();
 	const FVector& RightVector = GetActorRightVector();
-	//FVector DeltaDir = ForwardVector;
-	FVector SideVector = FVector::ZeroVector;
+	float X = 0.0f;
+	float Y = 0.0f;
 	if (LockedTarget)
 	{
-		const FVector& LockedPosition = LockedTarget->GetActorLocation();
-		FVector DirToLockedTarget = LockedPosition - ProjectileLocation;
-		const float Distance = DirToLockedTarget.Size();
-		const float StopRotatingRange = 150.0f;// FMath::Square<float>(150.0f);
-		FVector DirNormalised = (DirToLockedTarget).GetSafeNormal();
+		const FVector& LockedTargetPosition = LockedTarget->GetActorLocation();
+		const FTransform& OwnerTransform = GetTransform();
+		const FVector& Results = GameUtils::GetMagnitudeOfLocalTransformToTarget(OwnerTransform, LockedTargetPosition);
 
-		// If the projectile goes in front of the locked target, clear the lock.
-		const float DotForward = FVector::DotProduct(ForwardVector, DirNormalised);
-		if (DotForward <= 0.0f)
+		X = Results.X; // Distance to reach forward position
+		Y = Results.Y; // Distance to reach side position
+
+		if (X < 0.0f)
 		{
+			bTargetLost = true;
 			LockedTarget = nullptr;
-		}
-
-		if (LockedTarget)
-		{
-			// As Projectile gets closer to the target, we need to increase the seek speed by quite alot.
-			//if (Distance <= (RangeToAccelerateSeek * 0.5f))
-			//{
-			//	ProjectileSeekSpeed += SeekIncrementWhilstLocked * 2.25f * DeltaTime;
-			//	ProjectileSeekSpeed = FMath::Clamp<float>(ProjectileSeekSpeed, InitialSeekSpeed, MaxSeekSpeed);
-			//}
-
-			// TODO: Not 100% happy with the seeking just yet.
-			if (Distance <= RangeToAccelerateSeek)
-			{
-				const float ExtraRate = 1.4f;
-				ProjectileSeekSpeed += SeekIncrementWhilstLocked * ExtraRate * DeltaTime;
-				ProjectileSeekSpeed = FMath::Clamp<float>(ProjectileSeekSpeed, InitialSeekSpeed, MaxSeekSpeed);
-			}
-			else
-			{
-				ProjectileSeekSpeed += SeekIncrementWhilstLocked * DeltaTime;
-				ProjectileSeekSpeed = FMath::Clamp<float>(ProjectileSeekSpeed, InitialSeekSpeed, MaxSeekSpeed);
-			}
-
-			if (Distance >= StopRotatingRange)
-			{
-				//NewRotation = UKismetMathLibrary::FindLookAtRotation(ProjectileLocation, LockedPosition);
-				bUpdateRotation = true;
-			}
-
-			const float DotSide = FVector::DotProduct(RightVector, DirNormalised);
-			const float Deadzone = 0.02f;
-			if (DotSide >= Deadzone)
-			{
-				// Right Side
-				SideVector = RightVector;
-			}
-			else if (DotSide <= -Deadzone)
-			{
-				// Left Side
-				SideVector = -RightVector;
-			}
+			UE_LOG(LogTemp, Log, TEXT("Target Evaded Projectile"));
 		}
 	}
-	
-	// We don't want to seek into the ground when locking onto someone.
-	// Clear the vertical component, and let the gravity decide that.
-	FVector ForwardDelta = ForwardVector * ProjectileSpeed * DeltaTime;
-	ForwardDelta.Z = 0.0f;
-	
-	FVector AdjacentDelta = SideVector * ProjectileSeekSpeed * DeltaTime;
-	AdjacentDelta.Z = 0.0f;
-	
-	FVector AdjustedLocation = ProjectileLocation + ForwardDelta + AdjacentDelta;
-	FHitResult OutSweepHitResult;
 
-	//TODO: Might test interpolating the side delta, see if i can get it to strafe nicer.
-	// 
-	// 
-	// 
-	// Are we grounded ?
-	// Add Gravity.	
+	float ForwardProjectileSpeed = ProjectileSpeed;
+	if (LockedTarget)
+	{
+		// Once we've locked on, slow down just a tad, and start strafing.
+		ForwardProjectileSpeed *= 0.9f;
+	}
 
+	float ForwardSpeed = ForwardProjectileSpeed * DeltaTime;
+	FVector ForwardMomentum = ForwardVector * ForwardSpeed;
+	FVector Velocity = bTargetLost ? ProjectileVelocity : ForwardMomentum;
+	if (LockedTarget)
+	{
+		// X Represents the distance between us and the target, in the forward axis.
+		// The smaller it is, the larger we want the seek speed.
+		float LowSeek = ProjectileSeekSpeed * 0.75f;
+		float MappedResult = ProjectileSeekSpeed + LowSeek - GameUtils::MapValues(X, 0.0f, SeekForwardRange, LowSeek, ProjectileSeekSpeed);
+		float StrafeSpeed = MappedResult * DeltaTime;
+
+		FVector AdjacentMomentum = RightVector * StrafeSpeed * FMath::Sign(Y);
+		Velocity += AdjacentMomentum;		
+	}
+	Velocity.Z = 0.0f;
+	float VelocityZ = 0.0f;
+	// Remove Vertical component of Velocity;
 	FHitResult HitResult;
 	const AProjectileBase::ScaleGroundResult GroundResult = ShouldApplyGravity(ProjectileLocation, HitResult);
 
@@ -117,15 +95,20 @@ void ATargetSeekingProjectile::ProcessMovement(float DeltaTime)
 	if (HitResult.bBlockingHit)
 	{
 		GroundLocation = HitResult.ImpactPoint;
-		const float HeightAboveGround = 45.0f;
+		const float HeightAboveGround = 30.0f;
 		const float GroundZ = GroundLocation.Z + HeightAboveGround;
 		const bool bDescending = ((GroundZ - ProjectileLocation.Z) < 0.0f);
 		const float HeightInterpSpeed = bDescending ? 2.5f : 50.0f;
-		ProjectileHeight = FMath::FInterpTo(ProjectileLocation.Z, GroundZ, DeltaTime, HeightInterpSpeed);
+		VelocityZ = FMath::FInterpTo(ProjectileLocation.Z, GroundZ, DeltaTime, HeightInterpSpeed);
 		if (AActor* HitActor = HitResult.GetActor())
 		{
 			if (ASnowboardCharacterBase* SnowboardCharacter = Cast<ASnowboardCharacterBase>(HitActor))
 			{
+				if (SnowboardCharacter == Shooter)
+				{
+					UE_LOG(LogTemp, Warning, TEXT("Hitting Self ?"));
+				}
+
 				SnowboardCharacter->OnHitByProjectile(ProjectileType);
 				Destroy();
 				return;
@@ -136,18 +119,12 @@ void ATargetSeekingProjectile::ProcessMovement(float DeltaTime)
 	{
 		// No Ground? Descend..
 		const float Descend = ProjectileLocation.Z - 1000.0f;
-		ProjectileHeight = FMath::FInterpTo(ProjectileLocation.Z, Descend, DeltaTime, 2.5f);
+		VelocityZ = FMath::FInterpTo(ProjectileLocation.Z, Descend, DeltaTime, 2.5f);
 	}
 
-	AdjustedLocation.Z = ProjectileHeight;
-	SetActorLocation(AdjustedLocation, true, &OutSweepHitResult, ETeleportType::None);	
-	if (bUpdateRotation && ProjectileMesh)
-	{
-		//ProjectileMesh->SetWorldRotation(NewRotation);		
-	}
-}
-
-void ATargetSeekingProjectile::BeginPlay()
-{
-	Super::BeginPlay();	
+	FHitResult OutSweepHitResult;
+	FVector NewLocation = ProjectileLocation + Velocity;
+	NewLocation.Z = VelocityZ;
+	ProjectileVelocity = Velocity;
+	SetActorLocation(NewLocation, true, &OutSweepHitResult, ETeleportType::None);	
 }

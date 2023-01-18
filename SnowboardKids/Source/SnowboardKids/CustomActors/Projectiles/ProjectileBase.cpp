@@ -7,17 +7,14 @@
 AProjectileBase::AProjectileBase() :
 	Shooter(nullptr),
 	ProjectileType(EProjectileType::Hands),
-	ProjectileSpeed(2500.0f),
-	ProjectileSeekSpeed(50.0f),
-	MaxSeekSpeed(800.0f),
-	SeekIncrementWhilstLocked(300.0f),
-	RangeToAccelerateSeek(500.0f),
+	ProjectileSpeed(2450.0f),
 	ProjectileGravity(1050.0f),
 	FloorRayLength(5000.0f),
 	DistanceToConsiderGrounded(66.0f),
 	ProjectileLifeTimer(0.0f),
 	ProjectileLife(7.0f),
-	ProjectileHeight(0.0f)
+	ProjectileHeight(0.0f),
+	ProjectileVelocity(FVector::ZeroVector)
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
@@ -76,8 +73,6 @@ AProjectileBase::ScaleGroundResult AProjectileBase::ShouldApplyGravity(const FVe
 void AProjectileBase::BeginPlay()
 {
 	Super::BeginPlay();
-	
-	InitialSeekSpeed = ProjectileSeekSpeed;
 }
 
 // Called every frame

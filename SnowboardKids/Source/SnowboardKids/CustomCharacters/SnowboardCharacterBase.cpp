@@ -521,7 +521,7 @@ bool ASnowboardCharacterBase::ConsumeItemOffensive()
 
 		const FVector& OwnerLocation = GetActorLocation();
 		const FVector& ForwardVector = GetActorForwardVector();
-		FVector SpawnLocation = OwnerLocation + (ForwardVector * 100.0f); // Just in front of us.
+		FVector SpawnLocation = OwnerLocation + (ForwardVector * 100.0f) - (FVector::UpVector * 45.0f); // Just in front of us.
 		FRotator SpawnRotation = GetActorRotation();
 		FActorSpawnParameters SpawnParameters;
 		SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;

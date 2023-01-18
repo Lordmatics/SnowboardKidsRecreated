@@ -26,7 +26,7 @@ public:
 	void RegisterCharacter(ASnowboardCharacterBase* Character);
 	void UnRegisterCharacter(ASnowboardCharacterBase* Character);
 
-	ASnowboardCharacterBase* FindClosestCharacterWithinRange(const ASnowboardCharacterBase& Shooter, const AActor& Projectile, float Range) const;
+	ASnowboardCharacterBase* FindClosestCharacterWithinRange(const ASnowboardCharacterBase& Shooter, const AActor& Projectile, float ForwardRange, float SideRange) const;
 
 private:
 

@@ -8,9 +8,6 @@
 namespace GameUtils
 {
 	template<typename T>
-	void EnumString(const T& EnumValue, FName& OutName);
-
-	template<typename T>
 	void EnumString(const T& EnumValue, FName& OutName)
 	{
 		FName UnformattedName;
@@ -32,5 +29,13 @@ namespace GameUtils
 		OutName = FName(*NameAsString);		
 	}
 
+	// Translate a ratio to a different ratio.
 	float MapValues(float Value, float MinValue, float MaxValue, float TargetMin, float TargetMax);	
+
+	// This works by formulating a right angled triangle between us and a target.
+	// Can use the inverse transform to achieve very similiar results.
+	FVector SplitDirectionMagnitudes(const AActor& OwnerActor, const FVector& DirNormalised, const float DirMagnitude);
+	bool IsTargetOnMyRight(const FTransform& OwnerTransform, const FVector& Target, float& Value);
+	// Unrotates our vectors to determine the local differences in length between us and a target.
+	FVector GetMagnitudeOfLocalTransformToTarget(const FTransform& OwnerTransform, const FVector& Target);
 }
