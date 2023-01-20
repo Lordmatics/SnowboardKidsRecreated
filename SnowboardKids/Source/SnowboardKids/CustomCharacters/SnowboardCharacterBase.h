@@ -5,8 +5,8 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Pawn.h"
 #include "SnowboardKids/Interfaces/CharacterInterface.h"
-#include "../Data/BoardData.h"
-#include "../CustomActors/Projectiles/ProjectileBase.h"
+#include "SnowboardKids/Data/BoardData.h"
+#include "SnowboardKids/CustomActors/Projectiles/ProjectileBase.h"
 #include "SnowboardCharacterBase.generated.h"
 
 class USpringArmComponent;
@@ -18,6 +18,7 @@ class USnowboarderAnimInstance;
 class UAnimMontage;
 class AProjectileBase;
 class UDataTable;
+class UWidgetComponent;
 //class UCustomCharacterMovementComponent;
 class USkeletalMeshComponent;
 class UPawnMovementComponent;
@@ -106,6 +107,8 @@ public:
 
 	bool IsTargetable() const;
 
+	void OnFinishLineCrossed();
+
 private:
 	virtual void BeginPlay() override;	
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
@@ -116,15 +119,12 @@ private:
 	virtual void PossessedBy(AController* NewController) override;
 	virtual void UnPossessed() override;
 
+	UFUNCTION()
+	void ResetFinishLineOverlap();
+
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Character", meta = (AllowPrivateAccess = "true"))
 		UCapsuleComponent* CapsuleComponent;
-
-	//UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Character", meta = (AllowPrivateAccess = "true"))
-	//	UCameraComponent* ThirdPersonCamera;
-	//
-	//UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Character", meta = (AllowPrivateAccess = "true"))
-	//	USpringArmComponent* ThirdPersonSpringArm;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Character", meta = (AllowPrivateAccess = "true"))
 		UStaticMeshComponent* SnowboardMesh;
@@ -137,6 +137,9 @@ private:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Character", meta = (AllowPrivateAccess = "true"))
 		UCustomPawnMovementComponent* CharacterMovement;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Character", meta = (AllowPrivateAccess = "true"))
+		UWidgetComponent* PlayerWidget;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Character", meta = (AllowPrivateAccess = "true"))
 		float BaseTurnRate;
@@ -159,4 +162,7 @@ private:
 	// TODO: Change this to a data table, where we can map the projectile type - bp asset that corresponds to it.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character", meta = (AllowPrivateAccess = "true"))
 		UDataTable* ProjectileTable;
+
+	FTimerHandle ResetFinishLineOverlapHandle;
+	bool bOverlappedFinishLine;
 };

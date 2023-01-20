@@ -15,11 +15,13 @@
 #include "SnowboardKids/CustomComponents/CustomPawnMovementComponent.h"
 #include "SnowboardKids/Animation/SnowboarderAnimInstance.h"
 #include <Animation/AnimMontage.h>
-#include "../Controllers/SnowboardAIController.h"
+#include "SnowboardKids/Controllers/SnowboardAIController.h"
 #include <DrawDebugHelpers.h>
-#include "../CustomActors/Projectiles/ProjectileTable.h"
-#include "../Utils/GameUtils.h"
-#include "../Systems/WorldSystems/SnowboardCharacterSubsystem.h"
+#include "SnowboardKids/CustomActors/Projectiles/ProjectileTable.h"
+#include "SnowboardKids/Utils/GameUtils.h"
+#include "SnowboardKids/Systems/WorldSystems/SnowboardCharacterSubsystem.h"
+#include <Components/WidgetComponent.h>
+#include "SnowboardKids/CustomWidgets/PlayerWidget.h"
 
 // Sets default values
 ASnowboardCharacterBase::ASnowboardCharacterBase(const FObjectInitializer& ObjectInitializer) :
@@ -30,7 +32,8 @@ ASnowboardCharacterBase::ASnowboardCharacterBase(const FObjectInitializer& Objec
 	bRotationDisabled(false),
 	bIsAIControlled(false),
 	BoardMeshes(),
-	ProjectileTable(nullptr)
+	ProjectileTable(nullptr),
+	bOverlappedFinishLine(false)
 {
  	// Set this pawn to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;	
@@ -72,24 +75,11 @@ ASnowboardCharacterBase::ASnowboardCharacterBase(const FObjectInitializer& Objec
 	SkeletalMesh->SetCanEverAffectNavigation(false);
 	SkeletalMesh->SetRelativeLocation(FVector(0.0f, 0.0f, -45.0f), false);
 	
-	//ThirdPersonSpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
-	//ThirdPersonSpringArm->SetupAttachment(RootComponent);
-	//ThirdPersonSpringArm->TargetArmLength = 300.0f;
-	//ThirdPersonSpringArm->bUsePawnControlRotation = true;
-	//ThirdPersonSpringArm->SetRelativeLocation(FVector(0.0f, 0.0f, 43.0f), false);
-	//
-	//ThirdPersonCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
-	//ThirdPersonCamera->SetupAttachment(ThirdPersonSpringArm, USpringArmComponent::SocketName);
-	//ThirdPersonCamera->bUsePawnControlRotation = false;
-	
 	SnowboardMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("SnowboardMesh"));
-	//SnowboardMesh->AttachToComponent(SkeletalMesh, FAttachmentTransformRules::SnapToTargetNotIncludingScale, SocketNames::FootSocket);
-	//SnowboardMesh->SetAttachSocketName(SocketNames::FootSocket);
-	//SnowboardMesh->SetAttachParent(SkeletalMesh);
-	//SnowboardMesh->SetupAttachment(SkeletalMesh, SocketNames::FootSocket);
-	//SnowboardMesh->SetRelativeScale3D(FVector(0.05f));
-	//SnowboardMesh->SetRelativeLocation(FVector(0.326331f, 0.0f, 0.978994f));
 	SnowboardMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+
+	PlayerWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("PlayerWidget"));
+	PlayerWidget->SetupAttachment(RootComponent);
 }
 
 USnowboarderAnimInstance* ASnowboardCharacterBase::GetAnimInstance() const
@@ -155,6 +145,18 @@ void ASnowboardCharacterBase::BeginPlay()
 {
 	Super::BeginPlay();
 	
+	if (PlayerWidget)
+	{
+		if (UPlayerWidget* CustomWidget = Cast<UPlayerWidget>(PlayerWidget->GetWidget()))
+		{
+			const int TotalLaps = 3;
+			// Initialise any image switches before adding to viewport.
+			CustomWidget->UpdateLap(TotalLaps);
+
+			CustomWidget->AddToPlayerScreen();
+		}
+	}
+
 	if (DynamicMaterials.Num() > 0)
 	{
 		DynamicMaterials.Empty();
@@ -258,6 +260,16 @@ void ASnowboardCharacterBase::PossessedBy(AController* NewController)
 void ASnowboardCharacterBase::UnPossessed()
 {
 
+}
+
+void ASnowboardCharacterBase::ResetFinishLineOverlap()
+{
+	bOverlappedFinishLine = false;	
+
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().ClearTimer(ResetFinishLineOverlapHandle);
+	}
 }
 
 void ASnowboardCharacterBase::OnRightTriggerPressed()
@@ -553,4 +565,34 @@ bool ASnowboardCharacterBase::IsTargetable() const
 		return !CharacterMovement->HasCrashed();
 	}
 	return true;
+}
+
+void ASnowboardCharacterBase::OnFinishLineCrossed()
+{
+	if (!PlayerWidget)
+	{
+		return;
+	}
+
+	// Guard against multiple components overlapping simultaneously.
+	if (bOverlappedFinishLine)
+	{
+		return;
+	}
+
+	if (UWorld* World = GetWorld())
+	{
+		bOverlappedFinishLine = true;
+		World->GetTimerManager().SetTimer(ResetFinishLineOverlapHandle, this, &ASnowboardCharacterBase::ResetFinishLineOverlap, 2.0f);
+	}
+	
+	// NOTE: This is not full proof in the sense, that you can reverse, and go through it
+	// Could fix that by checking last known checkpoint.
+	// BUT - Won't be a problem once we implement the lift.
+	if (UPlayerWidget* CustomWidget = Cast<UPlayerWidget>(PlayerWidget->GetWidget()))
+	{
+		const int TotalLaps = 3;
+		// Initialise any image switches before adding to viewport.
+		CustomWidget->UpdateLap(TotalLaps);		
+	}
 }
