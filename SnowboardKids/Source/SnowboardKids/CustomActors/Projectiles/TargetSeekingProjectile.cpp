@@ -109,7 +109,7 @@ void ATargetSeekingProjectile::ProcessSeek(float DeltaTime)
 					UE_LOG(LogTemp, Warning, TEXT("Hitting Self ?"));
 				}
 
-				SnowboardCharacter->OnHitByProjectile(ProjectileType);
+				SnowboardCharacter->OnHitByProjectile(OffensiveItemType);
 				Destroy();
 				return;
 			}

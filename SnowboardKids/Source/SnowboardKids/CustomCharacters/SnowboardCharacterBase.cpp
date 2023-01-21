@@ -22,6 +22,8 @@
 #include "SnowboardKids/Systems/WorldSystems/SnowboardCharacterSubsystem.h"
 #include <Components/WidgetComponent.h>
 #include "SnowboardKids/CustomWidgets/PlayerWidget.h"
+#include "../CustomActors/Items/Offensive/OffensiveItem.h"
+#include "../CustomActors/Items/Utility/UtilityTable.h"
 
 // Sets default values
 ASnowboardCharacterBase::ASnowboardCharacterBase(const FObjectInitializer& ObjectInitializer) :
@@ -32,7 +34,8 @@ ASnowboardCharacterBase::ASnowboardCharacterBase(const FObjectInitializer& Objec
 	bRotationDisabled(false),
 	bIsAIControlled(false),
 	BoardMeshes(),
-	ProjectileTable(nullptr),
+	UtilityTable(nullptr),
+	OffensiveTable(nullptr),
 	bOverlappedFinishLine(false)
 {
  	// Set this pawn to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
@@ -124,7 +127,7 @@ void ASnowboardCharacterBase::PlayAnimation(UAnimMontage* Montage)
 	AnimInstance->Montage_Play(Montage);
 }
 
-void ASnowboardCharacterBase::OnHitByProjectile(EProjectileType ProjectileType)
+void ASnowboardCharacterBase::OnHitByProjectile(EOffensiveType OffensiveType)
 {
 	UE_LOG(LogTemp, Log, TEXT("%s Hit By Projectile!"), *GetName());
 
@@ -510,20 +513,20 @@ void ASnowboardCharacterBase::LookUpAtRate(float Rate)
 bool ASnowboardCharacterBase::ConsumeItemOffensive()
 {
 	UE_LOG(LogTemp, Log, TEXT("ConsumeItemOffensive"));
-	if (ProjectileTable)
+	if (OffensiveTable)
 	{
 		FName RowName;
-		GameUtils::EnumString(EProjectileType::Hands, RowName);		
+		GameUtils::EnumString(EOffensiveType::Hands, RowName);		
 
 		FString ContextString = FString::Printf(TEXT("%s"), ANSI_TO_TCHAR(__FUNCTION__));
-		FProjectileTableRow* FoundRow = ProjectileTable->FindRow<FProjectileTableRow>(RowName, ContextString, false);
+		FProjectileTableRow* FoundRow = OffensiveTable->FindRow<FProjectileTableRow>(RowName, ContextString, false);
 		if (!FoundRow)
 		{
 			UE_LOG(LogTemp, Log, TEXT("No Row Found with name: %s"), *RowName.ToString());
 			return false;
 		}
 
-		const TSubclassOf<AProjectileBase>& ProjectileClassToInstantiate = FoundRow->ProjectileClass;
+		const TSubclassOf<AOffensiveItem>& ProjectileClassToInstantiate = FoundRow->OffensiveClass;
 		UWorld* World = GetWorld();
 		if (!World)
 		{
@@ -537,11 +540,12 @@ bool ASnowboardCharacterBase::ConsumeItemOffensive()
 		FRotator SpawnRotation = GetActorRotation();
 		FActorSpawnParameters SpawnParameters;
 		SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-		AProjectileBase* SpawnedProjectile = World->SpawnActor<AProjectileBase>(ProjectileClassToInstantiate, SpawnLocation, SpawnRotation, SpawnParameters);
+		AOffensiveItem* SpawnedProjectile = World->SpawnActor<AOffensiveItem>(ProjectileClassToInstantiate, SpawnLocation, SpawnRotation, SpawnParameters);
 		if (SpawnedProjectile)
 		{
 			// Deduct ammo ?
 			SpawnedProjectile->SetShooter(this);
+			SpawnedProjectile->OnSpawned();
 			return true;
 		}
 	}
@@ -550,6 +554,71 @@ bool ASnowboardCharacterBase::ConsumeItemOffensive()
 
 bool ASnowboardCharacterBase::ConsumeItemUtility()
 {
+	UE_LOG(LogTemp, Log, TEXT("ConsumeItemUtility"));
+	if (UtilityTable)
+	{
+		FName RowName;
+		GameUtils::EnumString(EUtilityType::Rock, RowName);
+
+		FString ContextString = FString::Printf(TEXT("%s"), ANSI_TO_TCHAR(__FUNCTION__));
+		FUtilityTableRow* FoundRow = OffensiveTable->FindRow<FUtilityTableRow>(RowName, ContextString, false);
+		if (!FoundRow)
+		{
+			UE_LOG(LogTemp, Log, TEXT("No Row Found with name: %s"), *RowName.ToString());
+			return false;
+		}
+
+		const TSubclassOf<AUtilityItem>& UtilityClassToInstantiate = FoundRow->UtilityClass;
+		UWorld* World = GetWorld();
+		if (!World)
+		{
+			UE_LOG(LogTemp, Log, TEXT("No World Found with Row Name: %s"), *RowName.ToString());
+			return false;
+		}
+
+		EUtilityType UtilityType = FoundRow->UtilityType;
+		switch (UtilityType)
+		{
+			// Spawn
+		case EUtilityType::Rock:
+			break;
+			// Spawn
+		case EUtilityType::Ghost:
+			break;
+			// Spawn
+		case EUtilityType::TripleGhost:
+			break;
+			// Customize Self - Suppose i could spawn it for the SFX / VFX
+		case EUtilityType::Invisibility:
+			break;
+			// Spawn
+		case EUtilityType::FryingPan:
+			break;
+			// Spawn
+		case EUtilityType::MoneyThief:
+			break;
+			// Spawn
+		case EUtilityType::SpeedFan:
+			break;
+		default:
+			checkNoEntry()
+			break;
+		}
+
+		const FVector& OwnerLocation = GetActorLocation();
+		const FVector& ForwardVector = GetActorForwardVector();
+		FVector SpawnLocation = OwnerLocation + (ForwardVector * -100.0f) - (FVector::UpVector * 45.0f); // Just in front of us.
+		FRotator SpawnRotation = GetActorRotation();
+		FActorSpawnParameters SpawnParameters;
+		SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		AUtilityItem* SpawnedUtility = World->SpawnActor<AUtilityItem>(UtilityClassToInstantiate, SpawnLocation, SpawnRotation, SpawnParameters);
+		if (SpawnedUtility)
+		{
+			SpawnedUtility->SetShooter(this);
+			SpawnedUtility->OnSpawned();
+			return true;
+		}
+	}
 	return false;
 }
 
@@ -565,6 +634,38 @@ bool ASnowboardCharacterBase::IsTargetable() const
 		return !CharacterMovement->HasCrashed();
 	}
 	return true;
+}
+
+void ASnowboardCharacterBase::CollectItem(EItemBoxType ItemType)
+{
+	if (!PlayerWidget)
+	{
+		return;
+	}
+
+	UPlayerWidget* CustomWidget = Cast<UPlayerWidget>(PlayerWidget->GetWidget());
+	if (!CustomWidget)
+	{
+		return;
+	}
+
+	const int Position = GetPositionInRace();
+	switch (ItemType)
+	{
+	case EItemBoxType::Blue:
+		// Add Random Utility - Weighted by Position In Race
+		CurrentUtility = AUtilityItem::GenerateItemViaPosition(Position);
+		CustomWidget->UpdateUtility(CurrentUtility);
+		break;
+	case EItemBoxType::Red:
+		// Add Random Offensive - Weighted by Position In Race
+		CurrentOffensive = AOffensiveItem::GenerateItemViaPosition(Position);
+		CustomWidget->UpdateOffensive(CurrentOffensive);
+		break;
+	default:
+		checkNoEntry()
+		break;
+	}
 }
 
 void ASnowboardCharacterBase::OnFinishLineCrossed()
@@ -595,6 +696,18 @@ void ASnowboardCharacterBase::OnFinishLineCrossed()
 		// Initialise any image switches before adding to viewport.
 		CustomWidget->UpdateLap(TotalLaps);		
 	}
+}
+
+int ASnowboardCharacterBase::GetPositionInRace() const
+{
+	if (PlayerWidget)
+	{
+		if (UPlayerWidget* CustomWidget = Cast<UPlayerWidget>(PlayerWidget->GetWidget()))
+		{
+			return CustomWidget->GetPosition();
+		}
+	}
+	return -1;
 }
 
 bool ASnowboardCharacterBase::CanAfford(int Cost)

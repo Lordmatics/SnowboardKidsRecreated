@@ -6,21 +6,6 @@
 #include "SnowboardKids/CustomActors/Items/Offensive/OffensiveItem.h"
 #include "ProjectileBase.generated.h"
 
-UENUM(BlueprintType)
-enum class EProjectileType : uint8
-{
-	Hands,
-	Ice,
-	Parachute,
-	Bombs,
-	Snowmen,
-	Tornado,
-	MAX UMETA(Hidden)
-};
-
-// We'll customise how the projectile moves via these classes.
-// And the hit response can be determined by an enum.
-
 UCLASS()
 class SNOWBOARDKIDS_API AProjectileBase : public AOffensiveItem
 {
@@ -29,7 +14,7 @@ class SNOWBOARDKIDS_API AProjectileBase : public AOffensiveItem
 public:	
 	AProjectileBase();
 
-	FORCEINLINE EProjectileType GetProjectileType() const { return ProjectileType; }
+	virtual void OnSpawned() override;
 
 	virtual void ProcessMovement(float DeltaTime) PURE_VIRTUAL(AProjectileBase::ProcessMovement, return; )
 
@@ -49,9 +34,6 @@ protected:
 	virtual void Tick(float DeltaTime) override;
 
 protected:
-
-	UPROPERTY(EditAnywhere, Category = "Projectile")
-	EProjectileType ProjectileType;
 
 	FVector ProjectileVelocity;
 

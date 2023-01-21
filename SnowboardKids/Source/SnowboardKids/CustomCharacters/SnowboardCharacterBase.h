@@ -7,6 +7,9 @@
 #include "SnowboardKids/Interfaces/CharacterInterface.h"
 #include "SnowboardKids/Data/BoardData.h"
 #include "SnowboardKids/CustomActors/Projectiles/ProjectileBase.h"
+#include "../CustomActors/ItemBox.h"
+#include "../CustomActors/Items/Utility/UtilityItem.h"
+#include "../CustomActors/Items/Offensive/OffensiveItem.h"
 #include "SnowboardCharacterBase.generated.h"
 
 class USpringArmComponent;
@@ -63,7 +66,7 @@ public:
 
 	void PlayAnimation(UAnimMontage* Montage);
 
-	void OnHitByProjectile(EProjectileType ProjectileType);
+	void OnHitByProjectile(EOffensiveType ProjectileType);
 
 	// Inputs
 	void OnRightTriggerPressed();
@@ -107,7 +110,10 @@ public:
 
 	bool IsTargetable() const;
 
+	void CollectItem(EItemBoxType ItemType);
+
 	void OnFinishLineCrossed();
+	int GetPositionInRace() const;
 	bool CanAfford(int Cost);
 	void AddCoins(int Coins);
 	void RemoveCoins(int Coins);
@@ -164,9 +170,15 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character", meta = (AllowPrivateAccess = "true"))
 		FBoardMeshes BoardMeshes;
 
-	// TODO: Change this to a data table, where we can map the projectile type - bp asset that corresponds to it.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character", meta = (AllowPrivateAccess = "true"))
-		UDataTable* ProjectileTable;
+		UDataTable* UtilityTable;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character", meta = (AllowPrivateAccess = "true"))
+		UDataTable* OffensiveTable;
+
+	// NOTE: Might consider moving ui data into a struct are re code it, streamline abit nicer maybe.
+	EUtilityType CurrentUtility;
+	EOffensiveType CurrentOffensive;
 
 	FTimerHandle ResetFinishLineOverlapHandle;
 	bool bOverlappedFinishLine;

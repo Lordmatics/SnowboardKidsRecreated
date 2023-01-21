@@ -27,7 +27,7 @@ void ARicochetProjectile::ProcessMovement(float DeltaTime)
 			ASnowboardCharacterBase* SnowboardCharacter = Cast<ASnowboardCharacterBase>(HitActor);
 			if (SnowboardCharacter)
 			{
-				SnowboardCharacter->OnHitByProjectile(ProjectileType);
+				SnowboardCharacter->OnHitByProjectile(OffensiveItemType);
 				Destroy();
 			}
 			else

@@ -12,7 +12,7 @@ UProjectileTable::UProjectileTable() :
 
 FProjectileTableRow::FProjectileTableRow() :
 	Super(),
-	ProjectileType(EProjectileType::Hands),
-	ProjectileClass(nullptr)
+	OffensiveItemType(EOffensiveType::Hands),
+	OffensiveClass(nullptr)
 {	
 }

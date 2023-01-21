@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataTable.h"
-#include "ProjectileBase.h"
+#include "Snowboardkids/CustomActors/Items/Offensive/OffensiveItem.h"
 #include "ProjectileTable.generated.h"
 
 class AProjectileBase;
@@ -17,10 +17,10 @@ struct FProjectileTableRow : public FTableRowBase
 	FProjectileTableRow();
 
 	UPROPERTY(EditAnywhere, Category = "Projectile")
-	EProjectileType ProjectileType;
+	EOffensiveType OffensiveItemType;
 
 	UPROPERTY(EditAnywhere, Category = "Projectile")
-	TSubclassOf<AProjectileBase> ProjectileClass;
+	TSubclassOf<AOffensiveItem> OffensiveClass;
 };
 
 /**

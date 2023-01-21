@@ -6,6 +6,19 @@
 #include "SnowboardKids/CustomActors/Items/ItemBase.h"
 #include "OffensiveItem.generated.h"
 
+UENUM(BlueprintType)
+enum class EOffensiveType : uint8
+{
+	None,
+	Tornado,
+	Ice,	
+	Parachute,
+	Hands,	
+	Snowmen,
+	Bombs,
+	MAX UMETA(Hidden)
+};
+
 UCLASS()
 class SNOWBOARDKIDS_API AOffensiveItem : public AItemBase
 {
@@ -15,12 +28,29 @@ public:
 	// Sets default values for this actor's properties
 	AOffensiveItem();
 
+	FORCEINLINE EOffensiveType GetOffensiveItemType() const { return OffensiveItemType; }
+
+	virtual void OnSpawned() override;
+
+	static EOffensiveType GenerateItemViaPosition(int Position);	
+
 protected:
-	// Called when the game starts or when spawned
+
 	virtual void BeginPlay() override;
 
-public:	
-	// Called every frame
 	virtual void Tick(float DeltaTime) override;
+
+protected:
+	UPROPERTY(EditAnywhere, Category = "Offensive")
+		EOffensiveType OffensiveItemType;
+
+private:
+	
+	static const TMap<EOffensiveType, int> FirstPlaceWeights;
+	static const TMap<EOffensiveType, int> SecondPlaceWeights;
+	static const TMap<EOffensiveType, int> ThirdPlaceWeights;
+	static const TMap<EOffensiveType, int> FourthPlaceWeights;
+
+	static const TMap<int, const TMap<EOffensiveType, int>> ItemWeightMap;
 
 };

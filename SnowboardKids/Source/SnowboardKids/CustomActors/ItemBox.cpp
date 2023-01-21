@@ -3,7 +3,7 @@
 
 #include "SnowboardKids/CustomActors/ItemBox.h"
 #include <Components/StaticMeshComponent.h>
-#include "../CustomCharacters/SnowboardCharacterBase.h"
+#include "SnowboardKids/CustomCharacters/SnowboardCharacterBase.h"
 #include <Materials/MaterialInterface.h>
 
 // Sets default values
@@ -105,32 +105,7 @@ void AItemBox::OnTriggerOverlap(UPrimitiveComponent* OverlappedComponent, AActor
 		return;
 	}
 
-	SnowboardCharacter->RemoveCoins(CoinCost);
-
-	bTriggered = true;
-	YawRot = HitYawRot;
-
-	if (ItemBoxHeaderMesh)
-	{		
-		ItemBoxHeaderMesh->SetMaterial(0, ClosedMaterial);
-	}
-	// Give player the item.
-	//ItemBoxType;
-
-	// hide mesh via animation ?
-
-	UE_LOG(LogTemp, Log, TEXT("Item For: %s"), *SnowboardCharacter->GetName());
-
-	if (ItemBoxMesh)
-	{
-		ItemBoxMesh->SetHiddenInGame(true);
-		ItemBoxMesh->SetGenerateOverlapEvents(false);
-
-		if (UWorld* World = GetWorld())
-		{
-			World->GetTimerManager().SetTimer(ItemBoxTimerHandle, this, &AItemBox::ResetItemBox, 2.0f);
-		}		
-	}
+	CollectItem(*SnowboardCharacter);
 }
 
 void AItemBox::OnTriggerOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
@@ -158,5 +133,37 @@ void AItemBox::ResetItemBox()
 
 	bTriggered = false;
 	YawRot = InitialYawRot;
+}
+
+void AItemBox::CollectItem(ASnowboardCharacterBase& OverlappedCharacter)
+{
+	OverlappedCharacter.CollectItem(ItemBoxType);
+
+	OverlappedCharacter.RemoveCoins(CoinCost);
+
+	bTriggered = true;
+	YawRot = HitYawRot;
+
+	if (ItemBoxHeaderMesh)
+	{
+		ItemBoxHeaderMesh->SetMaterial(0, ClosedMaterial);
+	}
+	// Give player the item.
+	//ItemBoxType;
+
+	// hide mesh via animation ?
+
+	//UE_LOG(LogTemp, Log, TEXT("Item For: %s"), *SnowboardCharacter->GetName());
+
+	if (ItemBoxMesh)
+	{
+		ItemBoxMesh->SetHiddenInGame(true);
+		ItemBoxMesh->SetGenerateOverlapEvents(false);
+
+		if (UWorld* World = GetWorld())
+		{
+			World->GetTimerManager().SetTimer(ItemBoxTimerHandle, this, &AItemBox::ResetItemBox, 2.0f);
+		}
+	}
 }
 

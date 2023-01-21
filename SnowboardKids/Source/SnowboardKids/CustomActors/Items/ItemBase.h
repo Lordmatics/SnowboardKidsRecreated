@@ -21,6 +21,8 @@ public:
 
 	FORCEINLINE void SetShooter(ASnowboardCharacterBase* NewShooter) { Shooter = NewShooter; }
 
+	virtual void OnSpawned();
+
 protected:
 
 	virtual void BeginPlay() override;

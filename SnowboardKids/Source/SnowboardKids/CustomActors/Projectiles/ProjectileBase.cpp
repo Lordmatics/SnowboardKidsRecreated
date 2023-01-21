@@ -6,18 +6,22 @@
 // Sets default values
 AProjectileBase::AProjectileBase() :
 	Super(),
-	ProjectileType(EProjectileType::Hands),
+	ProjectileVelocity(FVector::ZeroVector),
 	ProjectileSpeed(2450.0f),
 	ProjectileGravity(1050.0f),
 	FloorRayLength(5000.0f),
 	DistanceToConsiderGrounded(66.0f),
 	ProjectileLifeTimer(0.0f),
 	ProjectileLife(7.0f),
-	ProjectileHeight(0.0f),
-	ProjectileVelocity(FVector::ZeroVector)
+	ProjectileHeight(0.0f)
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
+}
+
+void AProjectileBase::OnSpawned()
+{
+	Super::OnSpawned();
 }
 
 bool AProjectileBase::RaycastToFloor(FHitResult& HitResult) const

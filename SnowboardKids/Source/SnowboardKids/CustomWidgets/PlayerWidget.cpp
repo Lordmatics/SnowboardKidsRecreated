@@ -8,7 +8,9 @@ UPlayerWidget::UPlayerWidget(const FObjectInitializer& ObjectInitializer) :
 	CurrentLap(0),
 	TotalLaps(3),
 	PositionInRace(1),
-	Coins(0)
+	Coins(0),
+	CurrentUtility(EUtilityType::None),
+	CurrentOffensive(EOffensiveType::None)
 {
 
 }
@@ -40,4 +42,17 @@ void UPlayerWidget::RemoveCoins(int InCoins)
 {
 	Coins -= InCoins;
 	BPCoinsChanged(Coins);
+}
+
+void UPlayerWidget::UpdateUtility(EUtilityType Utility)
+{
+	CurrentUtility = Utility;
+	BPUtilityChanged(Utility);
+}
+
+void UPlayerWidget::UpdateOffensive(EOffensiveType Offensive)
+{
+	// TODO: Needs 'ammo count'
+	CurrentOffensive = Offensive;
+	BPOffensiveChanged(Offensive);
 }

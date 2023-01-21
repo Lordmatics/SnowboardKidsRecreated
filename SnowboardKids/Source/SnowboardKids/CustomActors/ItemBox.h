@@ -8,6 +8,7 @@
 
 class UStaticMeshComponent;
 class UMaterialInterface;
+class ASnowboardCharacterBase;
 
 UENUM(BlueprintType)
 enum class EItemBoxType : uint8
@@ -39,6 +40,8 @@ protected:
 
 	UFUNCTION()
 	void ResetItemBox();
+
+	void CollectItem(ASnowboardCharacterBase& OverlappedCharacter);
 
 private:
 

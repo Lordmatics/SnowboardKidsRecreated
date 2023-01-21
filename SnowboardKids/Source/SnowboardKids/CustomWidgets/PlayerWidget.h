@@ -4,6 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "../CustomActors/Items/Utility/UtilityItem.h"
+#include "../CustomActors/Items/Offensive/OffensiveItem.h"
 #include "PlayerWidget.generated.h"
 
 /**
@@ -24,11 +26,15 @@ public:
 	void UpdatePosition(int InNewPosition);
 	void AddCoins(int InCoins);
 	void RemoveCoins(int InCoins);
+	void UpdateUtility(EUtilityType Utility);
+	void UpdateOffensive(EOffensiveType Offensive);
 
 	bool CanAfford(int CoinCost) const { return Coins >= CoinCost; }
 	int GetCoins() const { return Coins; }
 	int GetPosition() const { return PositionInRace; }
 	int GetLap() const { return CurrentLap; }
+	EUtilityType GetUtility() const { return CurrentUtility; }
+	EOffensiveType GetOffensive() const { return CurrentOffensive; }
 
 protected:
 	// C++ Function calls this one
@@ -42,6 +48,12 @@ protected:
 	UFUNCTION(BlueprintImplementableEvent, Category = "Player UI")
 		void BPCoinsChanged(int InCoins);
 	
+	UFUNCTION(BlueprintImplementableEvent, Category = "Player UI")
+		void BPUtilityChanged(EUtilityType Type);
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Player UI")
+		void BPOffensiveChanged(EOffensiveType Type);
+
 private:
 
 	/** What lap are we currently on. */
@@ -60,8 +72,11 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player UI", meta = (AllowPrivateAccess = "true"))
 	int Coins;
 
-	// TODO: 
-	// Projectile Enum
-	// Utility Enum
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player UI", meta = (AllowPrivateAccess = "true"))
+	EUtilityType CurrentUtility;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player UI", meta = (AllowPrivateAccess = "true"))
+	EOffensiveType CurrentOffensive;
+
 	// Percentage along course via checkpoints - implement slider.
 };

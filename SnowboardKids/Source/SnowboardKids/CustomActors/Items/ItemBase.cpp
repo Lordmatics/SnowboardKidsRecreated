@@ -20,6 +20,11 @@ AItemBase::AItemBase() :
 	ProjectileMesh->SetGenerateOverlapEvents(true);
 }
 
+void AItemBase::OnSpawned()
+{
+
+}
+
 // Called when the game starts or when spawned
 void AItemBase::BeginPlay()
 {
