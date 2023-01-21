@@ -5,7 +5,7 @@
 
 // Sets default values
 AProjectileBase::AProjectileBase() :
-	Shooter(nullptr),
+	Super(),
 	ProjectileType(EProjectileType::Hands),
 	ProjectileSpeed(2450.0f),
 	ProjectileGravity(1050.0f),
@@ -18,14 +18,6 @@ AProjectileBase::AProjectileBase() :
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
-
-	Root = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
-	RootComponent = Root;
-
-	ProjectileMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Projectile"));
-	ProjectileMesh->SetupAttachment(Root);
-	ProjectileMesh->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Overlap);
-	ProjectileMesh->SetGenerateOverlapEvents(true);
 }
 
 bool AProjectileBase::RaycastToFloor(FHitResult& HitResult) const
