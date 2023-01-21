@@ -13,6 +13,8 @@ AItemBox::AItemBox() :
 	HitYawRot(-250.0f),
 	MinVariance(10.0f),
 	MaxVariance(30.0f),
+	CoinCost(100.0f),
+	InitialYawRot(100.0f),
 	bTriggered(false)
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
@@ -96,6 +98,14 @@ void AItemBox::OnTriggerOverlap(UPrimitiveComponent* OverlappedComponent, AActor
 		return;
 	}
 	
+	const bool bCanAfford = SnowboardCharacter->CanAfford(CoinCost);
+	if (!bCanAfford)
+	{
+		SnowboardCharacter->TriggerCrash();
+		return;
+	}
+
+	SnowboardCharacter->RemoveCoins(CoinCost);
 
 	bTriggered = true;
 	YawRot = HitYawRot;

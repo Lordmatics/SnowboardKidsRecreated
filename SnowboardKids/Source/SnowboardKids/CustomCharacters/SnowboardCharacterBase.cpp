@@ -596,3 +596,51 @@ void ASnowboardCharacterBase::OnFinishLineCrossed()
 		CustomWidget->UpdateLap(TotalLaps);		
 	}
 }
+
+bool ASnowboardCharacterBase::CanAfford(int Cost)
+{
+	if (PlayerWidget)
+	{
+		if (UPlayerWidget* CustomWidget = Cast<UPlayerWidget>(PlayerWidget->GetWidget()))
+		{
+			return CustomWidget->CanAfford(Cost);
+		}
+	}
+	return false;
+}
+
+void ASnowboardCharacterBase::AddCoins(int Coins)
+{
+	if (PlayerWidget)
+	{
+		if (UPlayerWidget* CustomWidget = Cast<UPlayerWidget>(PlayerWidget->GetWidget()))
+		{
+			CustomWidget->AddCoins(Coins);
+		}
+	}
+}
+
+void ASnowboardCharacterBase::RemoveCoins(int Coins)
+{
+	if (PlayerWidget)
+	{
+		if (UPlayerWidget* CustomWidget = Cast<UPlayerWidget>(PlayerWidget->GetWidget()))
+		{
+			CustomWidget->RemoveCoins(Coins);
+		}
+	}
+}
+
+void ASnowboardCharacterBase::TriggerCrash()
+{
+	UCapsuleComponent* Capsule = GetCapsuleComponent();
+	if (CharacterMovement && Capsule)
+	{
+		if (!CharacterMovement->HasCrashed())
+		{
+			const FRotator& Rotation = Capsule->GetComponentRotation();
+			//CharacterMovement->SetProcessTrick(true);
+			CharacterMovement->TriggerCrash(Rotation);
+		}
+	}
+}

@@ -72,6 +72,9 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Item", meta = (AllowPrivateAccess = "true"))
 	float MaxVariance;
 
+	UPROPERTY(EditAnywhere, Category = "Item", meta = (AllowPrivateAccess = "true"))
+	int CoinCost;
+
 	float InitialYawRot;
 
 	FTimerHandle ItemBoxTimerHandle;

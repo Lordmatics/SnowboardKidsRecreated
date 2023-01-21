@@ -25,6 +25,7 @@ public:
 	void AddCoins(int InCoins);
 	void RemoveCoins(int InCoins);
 
+	bool CanAfford(int CoinCost) const { return Coins >= CoinCost; }
 	int GetCoins() const { return Coins; }
 	int GetPosition() const { return PositionInRace; }
 	int GetLap() const { return CurrentLap; }

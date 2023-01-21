@@ -108,6 +108,11 @@ public:
 	bool IsTargetable() const;
 
 	void OnFinishLineCrossed();
+	bool CanAfford(int Cost);
+	void AddCoins(int Coins);
+	void RemoveCoins(int Coins);
+
+	void TriggerCrash();
 
 private:
 	virtual void BeginPlay() override;	
