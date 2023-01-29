@@ -56,13 +56,14 @@ struct Locals
 		Right
 	};
 
-	static FReply OnDisplacementButtonClick(ERayDir RayDir, float Amount)
+	static FReply OnDisplacementButtonClick(ERayDir RayDir)//, const TSharedPtr<SFloatPropertyWidget>& Float, int Sign)
 	{
 		USelection* SelectedActors = GEditor->GetSelectedActors();
 
 		// Let editor know that we're about to do something that we want to undo/redo
 		GEditor->BeginTransaction(LOCTEXT("MoveActorsTransactionName", "MoveActors"));
 
+		const float Amount = 256.0f;// Float->GetValue()* Sign;
 		// For each selected actor
 		for (FSelectionIterator Iter(*SelectedActors); Iter; ++Iter)
 		{
@@ -257,11 +258,11 @@ struct Locals
 	}
 
 	// NOTE: These can take extra parameters.
-	static TSharedRef<SWidget> MakeDisplacementButton(FText InLabel, ERayDir Dir, float Amount)
+	static TSharedRef<SWidget> MakeDisplacementButton(FText InLabel, ERayDir Dir)//, const TSharedPtr<SFloatPropertyWidget>& Float, int Sign)
 	{
 		return SNew(SButton)
 			.Text(InLabel)
-			.OnClicked_Static(&Locals::OnDisplacementButtonClick, Dir, Amount);
+			.OnClicked_Static(&Locals::OnDisplacementButtonClick, Dir);// , Float, Sign);
 	}
 
 	static TSharedRef<SWidget> MakeCentreButtonToGeometry(FText InLabel)
@@ -287,7 +288,7 @@ struct Locals
 };
 
 FSnowboardKidsEditorModePluginEdModeToolkit::FSnowboardKidsEditorModePluginEdModeToolkit()
-{
+{	
 	FEditorDelegates::BeginPIE.AddRaw(this, &FSnowboardKidsEditorModePluginEdModeToolkit::OnBeginPIE);
 	FEditorDelegates::EndPIE.AddRaw(this, &FSnowboardKidsEditorModePluginEdModeToolkit::OnEndPIE);
 	FEditorDelegates::PausePIE.AddRaw(this, &FSnowboardKidsEditorModePluginEdModeToolkit::OnPausePIE);
@@ -298,28 +299,15 @@ FSnowboardKidsEditorModePluginEdModeToolkit::~FSnowboardKidsEditorModePluginEdMo
 	FEditorDelegates::BeginPIE.RemoveAll(this);
 	FEditorDelegates::EndPIE.RemoveAll(this);
 	FEditorDelegates::PausePIE.RemoveAll(this);
-	USelection::SelectObjectEvent.RemoveAll(this);
+	USelection::SelectionChangedEvent.RemoveAll(this);
 }
 
-// TODO: Look SDetailNameArea.cpp
 void FSnowboardKidsEditorModePluginEdModeToolkit::Init(const TSharedPtr<IToolkitHost>& InitToolkitHost)
-{
-	// FEditorViewportClient* Client = (FEditorViewportClient*)GEditor->GetActiveViewport()->GetClient();
-	//GEditor->RedrawAllViewports(true);
+{	
+	USelection::SelectionChangedEvent.RemoveAll(this);
+	USelection::SelectionChangedEvent.AddRaw(this, &FSnowboardKidsEditorModePluginEdModeToolkit::OnObjectSelected);
 
-	//UUnrealEdEngine* EditorEngine = GUnrealEd;
-	//if (EditorEngine)
-	//{
-	//	EditorEngine->()
-	//}
-
-	//SharedRef = InitToolkitHost.ToSharedRef();
-	OnBeginPIE(false);
-
-	//USelection::SelectionChangedEvent.AddUObject(this, &FSnowboardKidsEditorModePluginEdModeToolkit::OnEditorSelectionChanged);
-	
-	CreateContent();
-		
+	CreateContent();	
 	FModeToolkit::Init(InitToolkitHost);
 }
 
@@ -345,7 +333,7 @@ void FSnowboardKidsEditorModePluginEdModeToolkit::CreateContent()
 			.Padding(25)
 			[
 				SNew(STextBlock)
-				.AutoWrapText(true)
+				.AutoWrapText(false)
 				.Text(LOCTEXT("HelperLabel", "Select some actors and move them around using buttons below"))
 			]
 			+ SVerticalBox::Slot()
@@ -361,7 +349,10 @@ void FSnowboardKidsEditorModePluginEdModeToolkit::CreateContent()
 			.AutoHeight()
 			.Padding(5)
 			[
-				SNew(SFloatPropertyWidget)
+				// TODO: Create new Widget class to house these 4 buttons.
+				// Then link them up with a float property widget internally
+				// Then the buttons can read the value of the float.
+				SAssignNew(FloatProperty, SFloatPropertyWidget)
 				.Value(256.0f)
 				.Min(0.0f)
 				.Max(1024.0f)
@@ -372,7 +363,7 @@ void FSnowboardKidsEditorModePluginEdModeToolkit::CreateContent()
 				.AutoHeight()
 				.Padding(5)
 				[
-					Locals::MakeDisplacementButton(LOCTEXT("UpButtonLabel", "Up"), Locals::ERayDir::Up, Factor)
+					Locals::MakeDisplacementButton(LOCTEXT("UpButtonLabel", "Up"), Locals::ERayDir::Up)//, FloatProperty, 1)
 				]
 			+ SVerticalBox::Slot()
 				.HAlign(HAlign_Center)
@@ -384,13 +375,13 @@ void FSnowboardKidsEditorModePluginEdModeToolkit::CreateContent()
 					.AutoWidth()
 					.Padding(5)
 					[
-						Locals::MakeDisplacementButton(LOCTEXT("LeftButtonLabel", "Left"), Locals::ERayDir::Right, -Factor)
+						Locals::MakeDisplacementButton(LOCTEXT("LeftButtonLabel", "Left"), Locals::ERayDir::Right)//, FloatProperty, -1)
 					]
 					+ SHorizontalBox::Slot()
 						.AutoWidth()
 						.Padding(5)
 						[
-							Locals::MakeDisplacementButton(LOCTEXT("RightButtonLabel", "Right"), Locals::ERayDir::Right, Factor)
+							Locals::MakeDisplacementButton(LOCTEXT("RightButtonLabel", "Right"), Locals::ERayDir::Right)//, FloatProperty, 1)
 						]
 				]
 			+ SVerticalBox::Slot()
@@ -398,7 +389,7 @@ void FSnowboardKidsEditorModePluginEdModeToolkit::CreateContent()
 				.AutoHeight()
 				.Padding(10)
 				[
-					Locals::MakeDisplacementButton(LOCTEXT("DownButtonLabel", "Down"), Locals::ERayDir::Up, -Factor)
+					Locals::MakeDisplacementButton(LOCTEXT("DownButtonLabel", "Down"), Locals::ERayDir::Up)//, FloatProperty, -1)
 				]
 			+ SVerticalBox::Slot()
 				.AutoHeight()
@@ -406,7 +397,7 @@ void FSnowboardKidsEditorModePluginEdModeToolkit::CreateContent()
 				.Padding(10)
 				[
 					SNew(STextBlock)
-					.AutoWrapText(true)
+					.AutoWrapText(false)
 				.Text(LOCTEXT("HelperLabelCentre", "Centre Actor Will scan for static walls. Following the Green Local Arrow from the Actor."))
 				]
 			+ SVerticalBox::Slot()
@@ -422,7 +413,7 @@ void FSnowboardKidsEditorModePluginEdModeToolkit::CreateContent()
 				.Padding(10)
 				[
 					SNew(STextBlock)
-					.AutoWrapText(true)
+					.AutoWrapText(false)
 					.Text(LOCTEXT("HelperLabelGround", "Ground Actor Will scan for a static floor. Following the blue Local Arrow from the Actor."))
 				]
 			+ SVerticalBox::Slot()
@@ -438,7 +429,7 @@ void FSnowboardKidsEditorModePluginEdModeToolkit::CreateContent()
 				.Padding(10)
 				[
 					SNew(STextBlock)
-					.AutoWrapText(true)
+					.AutoWrapText(false)
 					.Text(LOCTEXT("HelperLabelCentreGround", "Centre + Ground Actor will centre the actor, then from the new centre position, ground the actor - green then blue arrows respectively."))
 				]
 			+ SVerticalBox::Slot()
@@ -453,68 +444,25 @@ void FSnowboardKidsEditorModePluginEdModeToolkit::CreateContent()
 
 void FSnowboardKidsEditorModePluginEdModeToolkit::OnObjectSelected(UObject* Object)
 {
-	volatile int i = 5;
-
 	if (ActorCollection)
 	{
-		//ActorCollection.Reset();
-		//CreateContent();
 		TArray<AActor*> SelectedObjects;
 		Locals::GetSelectedObjects(SelectedObjects);
 		
 		ActorCollection->UpdateSelected(SelectedObjects);
 	}
-	
-	// https://forums.unrealengine.com/t/slate-listview-requestlistrefresh/4865/3
-	
-	//ToolkitWidget->ClearContent();
-	//ToolkitWidget->Invalidate(EInvalidateWidgetReason::All);
-	//ToolkitWidget.Reset();
-	//CreateContent();
-	//
-	//if (GEditor)
-	//{
-	//	GEditor->RedrawAllViewports(true);
-	//	GEditor->RedrawLevelEditingViewports(true);
-	//}
-
-	//ToolkitWidget->AddUpdateFlags(EWidgetUpdateFlags::NeedsRepaint);
-	//FPaintArgs Args(ToolkitWidget.Get());
-	//FGeometry AlottedGeometry;
-	//FSlateRect MyCullingRect;
-	//FSlateWindowElementList OutDrawElements;
-	//int32 LayerId;
-	//FWidgetStyle InWidgetStyle;
-	//bool bParentEnabled;
-	//ToolkitWidget->Paint(Args, AlottedGeometry, MyCullingRect, OutDrawElements, LayerId, InWidgetStyle, bParentEnabled)
-	//ToolkitWidget->Invalidate(EInvalidateWidgetReason::None);
-	//ToolkitWidget.Reset();
-	//Init(MakeShared<IToolkitHost>&())
 }
 
 void FSnowboardKidsEditorModePluginEdModeToolkit::OnBeginPIE(const bool bIsSimulating)
 {
-	volatile int i = 5;
-	USelection::SelectObjectEvent.RemoveAll(this);
-	USelection::SelectObjectEvent.AddRaw(this, &FSnowboardKidsEditorModePluginEdModeToolkit::OnObjectSelected);
 }
 
 void FSnowboardKidsEditorModePluginEdModeToolkit::OnEndPIE(const bool bIsSimulating)
 {
-	volatile int i = 5;
-	USelection::SelectObjectEvent.RemoveAll(this);
-
 }
 
 void FSnowboardKidsEditorModePluginEdModeToolkit::OnPausePIE(const bool bIsSimulating)
 {
-	volatile int i = 5;
-
-}
-
-void FSnowboardKidsEditorModePluginEdModeToolkit::OnEditorSelectionChanged(UObject* SelectionThatChanged)
-{
-	volatile int i = 5;
 }
 
 FName FSnowboardKidsEditorModePluginEdModeToolkit::GetToolkitFName() const

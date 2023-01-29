@@ -31,6 +31,7 @@ public:
 	FORCEINLINE void SetOffsetValue(float NewValue) { FloatValue = NewValue; }
 	FORCEINLINE void SetOffsetValueCommitted(const float NewValue, ETextCommit::Type CommitType) { SetOffsetValue(NewValue); }
 
+	FORCEINLINE float GetValue() const { return FloatValue; }
 private:
 	float FloatValue;
 	float MinValue;

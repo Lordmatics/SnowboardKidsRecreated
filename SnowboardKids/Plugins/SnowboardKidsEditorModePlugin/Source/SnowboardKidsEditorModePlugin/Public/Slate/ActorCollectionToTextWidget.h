@@ -24,6 +24,9 @@ public:
 	virtual FSlateColor GetForegroundColor() const override;
 
 private:
+	void UpdateContents();
+
+private:
 	TSharedPtr<SVerticalBox> Container;
 	TArray<AActor*> SelectedObjects;
 };
