@@ -2,6 +2,7 @@
 
 
 #include "SnowboardKids/CustomActors/Items/Utility/UtilityItem.h"
+#include "SnowboardKids/Utils/GameUtils.h"
 
 //Rock,
 //Ghost,
@@ -93,15 +94,19 @@ EUtilityType AUtilityItem::GenerateItemViaPosition(int Position)
 				EUtilityType Type = Current.Key;
 				const int Chance = Current.Value;
 				const int RandomChance = FMath::RandRange(0, 100);
-				if (Chance <= RandomChance)
+				if (RandomChance <= Chance )
 				{
+					FName EnumName;
+					GameUtils::EnumString<EUtilityType>(Type, EnumName);
+					UE_LOG(LogTemp, Log, TEXT("Generated Utility %s, via chance: %d <= %d"), *EnumName.ToString(), RandomChance, Chance);
 					return Type;
 				}
 			}
 			Iterations++;
 		}
 	}
-	// If after a few attempts, nothing was picked, default to Hands.
+	// If after a few attempts, nothing was picked, default to Hands.	
+	UE_LOG(LogTemp, Log, TEXT("Generated Default Utility Rock"));
 	return EUtilityType::Rock;
 }
 

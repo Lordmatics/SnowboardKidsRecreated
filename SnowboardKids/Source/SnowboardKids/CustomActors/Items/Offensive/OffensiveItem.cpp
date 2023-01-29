@@ -2,6 +2,7 @@
 
 
 #include "SnowboardKids/CustomActors/Items/Offensive/OffensiveItem.h"
+#include "SnowboardKids/Utils/GameUtils.h"
 
 
 //Tornado,
@@ -12,8 +13,8 @@
 //Bombs,
 const TMap<EOffensiveType, int> AOffensiveItem::FirstPlaceWeights =
 {
-	{ EOffensiveType::Tornado, 3 },
-	{ EOffensiveType::Ice, 6 },
+	{ EOffensiveType::Tornado, 1 },
+	{ EOffensiveType::Ice, 1 },
 	{ EOffensiveType::Parachute, 12 },
 	{ EOffensiveType::Hands, 25 },
 	{ EOffensiveType::Snowmen, 50 },
@@ -88,8 +89,11 @@ EOffensiveType AOffensiveItem::GenerateItemViaPosition(int Position)
 				EOffensiveType Type = Current.Key;
 				const int Chance = Current.Value;
 				const int RandomChance = FMath::RandRange(0, 100);
-				if (Chance <= RandomChance)
+				if (RandomChance <= Chance )
 				{
+					FName EnumName;
+					GameUtils::EnumString<EOffensiveType>(Type, EnumName);
+					UE_LOG(LogTemp, Log, TEXT("Generated Offensive %s, via chance: %d <= %d"), *EnumName.ToString(), RandomChance, Chance);
 					return Type;
 				}
 			}
@@ -97,6 +101,7 @@ EOffensiveType AOffensiveItem::GenerateItemViaPosition(int Position)
 		}
 	}
 	// If after a few attempts, nothing was picked, default to Hands.
+	UE_LOG(LogTemp, Log, TEXT("Generated Default Offensive Hands"));
 	return EOffensiveType::Hands;
 }
 

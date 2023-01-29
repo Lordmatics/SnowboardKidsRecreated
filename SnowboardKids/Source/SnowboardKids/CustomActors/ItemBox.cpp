@@ -137,9 +137,7 @@ void AItemBox::ResetItemBox()
 
 void AItemBox::CollectItem(ASnowboardCharacterBase& OverlappedCharacter)
 {
-	OverlappedCharacter.CollectItem(ItemBoxType);
-
-	OverlappedCharacter.RemoveCoins(CoinCost);
+	OverlappedCharacter.CollectItem(ItemBoxType, CoinCost);
 
 	bTriggered = true;
 	YawRot = HitYawRot;
@@ -148,12 +146,6 @@ void AItemBox::CollectItem(ASnowboardCharacterBase& OverlappedCharacter)
 	{
 		ItemBoxHeaderMesh->SetMaterial(0, ClosedMaterial);
 	}
-	// Give player the item.
-	//ItemBoxType;
-
-	// hide mesh via animation ?
-
-	//UE_LOG(LogTemp, Log, TEXT("Item For: %s"), *SnowboardCharacter->GetName());
 
 	if (ItemBoxMesh)
 	{

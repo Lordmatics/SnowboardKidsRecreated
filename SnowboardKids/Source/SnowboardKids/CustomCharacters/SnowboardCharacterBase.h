@@ -110,7 +110,7 @@ public:
 
 	bool IsTargetable() const;
 
-	void CollectItem(EItemBoxType ItemType);
+	void CollectItem(EItemBoxType ItemType, int CoinCost);
 
 	void OnFinishLineCrossed();
 	int GetPositionInRace() const;

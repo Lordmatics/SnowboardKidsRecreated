@@ -22,7 +22,7 @@ AItemBase::AItemBase() :
 
 void AItemBase::OnSpawned()
 {
-
+	UE_LOG(LogTemp, Log, TEXT("ItemSpawned: %s"), *GetName());
 }
 
 // Called when the game starts or when spawned

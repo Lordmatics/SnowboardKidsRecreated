@@ -516,7 +516,7 @@ bool ASnowboardCharacterBase::ConsumeItemOffensive()
 	if (OffensiveTable)
 	{
 		FName RowName;
-		GameUtils::EnumString(EOffensiveType::Hands, RowName);		
+		GameUtils::EnumString(CurrentOffensive, RowName);		
 
 		FString ContextString = FString::Printf(TEXT("%s"), ANSI_TO_TCHAR(__FUNCTION__));
 		FProjectileTableRow* FoundRow = OffensiveTable->FindRow<FProjectileTableRow>(RowName, ContextString, false);
@@ -558,10 +558,10 @@ bool ASnowboardCharacterBase::ConsumeItemUtility()
 	if (UtilityTable)
 	{
 		FName RowName;
-		GameUtils::EnumString(EUtilityType::Rock, RowName);
+		GameUtils::EnumString(CurrentUtility, RowName);
 
 		FString ContextString = FString::Printf(TEXT("%s"), ANSI_TO_TCHAR(__FUNCTION__));
-		FUtilityTableRow* FoundRow = OffensiveTable->FindRow<FUtilityTableRow>(RowName, ContextString, false);
+		FUtilityTableRow* FoundRow = UtilityTable->FindRow<FUtilityTableRow>(RowName, ContextString, false);
 		if (!FoundRow)
 		{
 			UE_LOG(LogTemp, Log, TEXT("No Row Found with name: %s"), *RowName.ToString());
@@ -636,7 +636,7 @@ bool ASnowboardCharacterBase::IsTargetable() const
 	return true;
 }
 
-void ASnowboardCharacterBase::CollectItem(EItemBoxType ItemType)
+void ASnowboardCharacterBase::CollectItem(EItemBoxType ItemType, int CoinCost)
 {
 	if (!PlayerWidget)
 	{
@@ -656,16 +656,21 @@ void ASnowboardCharacterBase::CollectItem(EItemBoxType ItemType)
 		// Add Random Utility - Weighted by Position In Race
 		CurrentUtility = AUtilityItem::GenerateItemViaPosition(Position);
 		CustomWidget->UpdateUtility(CurrentUtility);
+		UE_LOG(LogTemp, Log, TEXT("CollectItem: Utility"));
 		break;
 	case EItemBoxType::Red:
 		// Add Random Offensive - Weighted by Position In Race
 		CurrentOffensive = AOffensiveItem::GenerateItemViaPosition(Position);
 		CustomWidget->UpdateOffensive(CurrentOffensive);
+		UE_LOG(LogTemp, Log, TEXT("CollectItem: Offensive"));
 		break;
 	default:
 		checkNoEntry()
 		break;
 	}
+
+	
+	RemoveCoins(CoinCost);
 }
 
 void ASnowboardCharacterBase::OnFinishLineCrossed()
