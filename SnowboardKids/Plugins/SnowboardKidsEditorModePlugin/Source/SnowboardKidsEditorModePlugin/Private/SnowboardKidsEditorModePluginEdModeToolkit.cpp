@@ -21,7 +21,37 @@ void FSnowboardKidsEditorModePluginEdModeToolkit::Init(const TSharedPtr<IToolkit
 	{
 		static bool IsWidgetEnabled()
 		{
-			return GEditor->GetSelectedActors()->Num() != 0;
+			if (!GEditor)
+			{
+				return false;
+			}
+
+			USelection* CurrentSelection = GEditor->GetSelectedActors();
+			if (!CurrentSelection)
+			{
+				return false;
+			}
+			
+			const int NumSelected = CurrentSelection->Num();
+			const bool bIsWidgetEnabled = NumSelected != 0;
+			return bIsWidgetEnabled;
+		}
+
+		static bool GetSelectedObjects(TArray<AActor*>& SelectedObjects)
+		{
+			if (!GEditor)
+			{
+				return false;
+			}
+
+			USelection* CurrentSelection = GEditor->GetSelectedActors();
+			if (!CurrentSelection)
+			{
+				return false;
+			}
+
+			CurrentSelection->GetSelectedObjects<AActor>(SelectedObjects);		
+			return true;
 		}
 
 		enum class ERayDir : uint8
@@ -263,6 +293,12 @@ void FSnowboardKidsEditorModePluginEdModeToolkit::Init(const TSharedPtr<IToolkit
 
 	const float Factor = 256.0f;
 
+	TArray<AActor*> SelectedObjects;
+	Locals::GetSelectedObjects(SelectedObjects);
+
+	const int NumSelected = SelectedObjects.Num();
+	UE_LOG(LogTemp, Log, TEXT("FSnowboardKidsEditorModePluginEdModeToolkit::Init: %d"), NumSelected);
+
 	SAssignNew(ToolkitWidget, SBorder)
 		.HAlign(HAlign_Center)
 		.Padding(25)
@@ -277,6 +313,14 @@ void FSnowboardKidsEditorModePluginEdModeToolkit::Init(const TSharedPtr<IToolkit
 				SNew(STextBlock)
 				.AutoWrapText(true)
 				.Text(LOCTEXT("HelperLabel", "Select some actors and move them around using buttons below"))
+			]
+			+ SVerticalBox::Slot()
+			.HAlign(HAlign_Center)
+			.AutoHeight()
+			.Padding(5)
+			[
+				SNew(SActorCollectionToTextWidget)
+				.Collection(SelectedObjects)
 			]
 			+ SVerticalBox::Slot()
 			.HAlign(HAlign_Center)

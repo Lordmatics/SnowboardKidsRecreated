@@ -18,6 +18,12 @@
 		{
 			"Name": "SnowboardKidsEditorToolbarButton",
 			"Type": "Editor",
+			"LoadingPhase": "PostEngineInit",
+			"Enabled": false
+		},
+		{
+			"Name": "SnowboardKidsEditorToolbarButton",
+			"Type": "Runtime",
 			"LoadingPhase": "Default"
 		}
 	]

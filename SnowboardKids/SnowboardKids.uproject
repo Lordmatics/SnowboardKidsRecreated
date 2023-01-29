@@ -27,7 +27,7 @@
 		},
 		{
 			"Name": "SnowboardKidsEditorToolbarButton",
-			"Enabled": true
+			"Enabled": false
 		}
 	],
 	"TargetPlatforms": [

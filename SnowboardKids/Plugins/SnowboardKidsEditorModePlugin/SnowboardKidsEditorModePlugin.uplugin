@@ -18,7 +18,14 @@
 		{
 			"Name": "SnowboardKidsEditorModePlugin",
 			"Type": "Editor",
-			"LoadingPhase": "Default"
+			"LoadingPhase": "PostEngineInit",
+			"Enabled":  false
+		},
+		{
+			"Name": "SnowboardKidsEditorModePlugin",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"Enabled":  false
 		}
 	]
 }
