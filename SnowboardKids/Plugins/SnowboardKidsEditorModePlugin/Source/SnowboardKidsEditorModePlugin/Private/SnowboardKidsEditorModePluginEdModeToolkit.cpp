@@ -6,10 +6,13 @@
 #include "Widgets/Input/SButton.h"
 #include "Widgets/Text/STextBlock.h"
 #include "EditorModeManager.h"
+#include <Widgets/Input/SNumericEntryBox.h>
+#include "Slate/FloatWidget.h"
 
 #define LOCTEXT_NAMESPACE "FSnowboardKidsEditorModePluginEdModeToolkit"
 
-FSnowboardKidsEditorModePluginEdModeToolkit::FSnowboardKidsEditorModePluginEdModeToolkit()
+FSnowboardKidsEditorModePluginEdModeToolkit::FSnowboardKidsEditorModePluginEdModeToolkit() :
+	OffsetValue(256.0f)
 {
 }
 
@@ -277,6 +280,45 @@ void FSnowboardKidsEditorModePluginEdModeToolkit::Init(const TSharedPtr<IToolkit
 				.Text(LOCTEXT("HelperLabel", "Select some actors and move them around using buttons below"))
 			]
 			+ SVerticalBox::Slot()
+			.HAlign(HAlign_Center)
+			.AutoHeight()
+			.Padding(5)
+			[
+				SNew(SFloatPropertyWidget)
+				.Value(256.0f)
+				.Min(0.0f)
+				.Max(1024.0f)
+				.Text(LOCTEXT("OffsetValue", "Offset Value"))
+				/*SNew(SHorizontalBox)
+				+ SHorizontalBox::Slot()
+				.AutoWidth()
+				.Padding(10.0f, 1.0f, 10.0f, 1.0f)
+				[
+					SNew(SBox)
+					[
+						SNew(STextBlock)					
+						.Text(LOCTEXT("AmountText", "Offset Value"))
+					]
+				]	
+				+ SHorizontalBox::Slot()
+				.AutoWidth()
+				.Padding(10.0f, 1.0f, 10.0f, 1.0f)
+				[
+					SNew(SNumericEntryBox<float>)
+					.AllowSpin(true)
+					.MinValue(TOptional<float>())
+					.MaxValue(TOptional<float>())
+					.MinSliderValue(this, &FSnowboardKidsEditorModePluginEdModeToolkit::GetScalarParameterSliderMin)
+					.MaxSliderValue(this, &FSnowboardKidsEditorModePluginEdModeToolkit::GetScalarParameterSliderMax)
+					.Delta(0.1f)
+					.Value(this, &FSnowboardKidsEditorModePluginEdModeToolkit::GetOffsetValue)
+					.OnBeginSliderMovement(this, &FSnowboardKidsEditorModePluginEdModeToolkit::OnScalarParameterSlideBegin)
+					.OnEndSliderMovement(this, &FSnowboardKidsEditorModePluginEdModeToolkit::OnScalarParameterSlideEnd)
+					.OnValueChanged(this, &FSnowboardKidsEditorModePluginEdModeToolkit::SetOffsetValue)
+					.OnValueCommitted(this, &FSnowboardKidsEditorModePluginEdModeToolkit::SetOffsetValueCommitted)
+				]*/
+			]
+			+ SVerticalBox::Slot()
 				.HAlign(HAlign_Center)
 				.AutoHeight()
 				.Padding(5)
@@ -352,11 +394,11 @@ void FSnowboardKidsEditorModePluginEdModeToolkit::Init(const TSharedPtr<IToolkit
 				]
 			+ SVerticalBox::Slot()
 			.HAlign(HAlign_Center)
-				.AutoHeight()
-				.Padding(5)
-				[
-					Locals::MakeCentreGroundButtonToGeometry(LOCTEXT("GroundAndCentreButtonLabel", "Centre + Ground Actor"))
-				]
+			.AutoHeight()
+			.Padding(5)
+			[
+				Locals::MakeCentreGroundButtonToGeometry(LOCTEXT("GroundAndCentreButtonLabel", "Centre + Ground Actor"))
+			]			
 		];
 		
 	FModeToolkit::Init(InitToolkitHost);
@@ -377,4 +419,33 @@ class FEdMode* FSnowboardKidsEditorModePluginEdModeToolkit::GetEditorMode() cons
 	return GLevelEditorModeTools().GetActiveMode(FSnowboardKidsEditorModePluginEdMode::EM_SnowboardKidsEditorModePluginEdModeId);
 }
 
+TOptional<float> FSnowboardKidsEditorModePluginEdModeToolkit::GetScalarParameterSliderMin() const
+{
+	return 0.0f;
+}
+
+TOptional<float> FSnowboardKidsEditorModePluginEdModeToolkit::GetScalarParameterSliderMax() const
+{
+	return 1024.0f;
+}
+
+void FSnowboardKidsEditorModePluginEdModeToolkit::OnScalarParameterSlideBegin()
+{
+	UE_LOG(LogTemp, Log, TEXT("Begin slide"));
+
+	GEditor->BeginTransaction(LOCTEXT("ChangeFloatParam", "Change Float Param"));
+}
+
+void FSnowboardKidsEditorModePluginEdModeToolkit::OnScalarParameterSlideEnd(const float NewValue)
+{
+	GEditor->EndTransaction();
+}
+
+void FSnowboardKidsEditorModePluginEdModeToolkit::SetOffsetValueCommitted(const float NewValue, ETextCommit::Type CommitType)
+{
+	SetOffsetValue(NewValue);
+}
+
 #undef LOCTEXT_NAMESPACE
+
+

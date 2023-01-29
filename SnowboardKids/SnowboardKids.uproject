@@ -20,6 +20,14 @@
 		{
 			"Name": "ApexDestruction",
 			"Enabled": true
+		},
+		{
+			"Name": "SnowboardKidsEditorModePlugin",
+			"Enabled": true
+		},
+		{
+			"Name": "SnowboardKidsEditorToolbarButton",
+			"Enabled": true
 		}
 	],
 	"TargetPlatforms": [
